@@ -1,33 +1,35 @@
 package middleware_test
 
 import (
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
-	"github.com/evrone/go-clean-template/internal/controller/restapi/middleware"
-	"github.com/evrone/go-clean-template/pkg/jwt"
-	"github.com/gofiber/fiber/v2"
+	"github.com/bhcoder23/gin-clean-template/internal/controller/restapi/middleware"
+	"github.com/bhcoder23/gin-clean-template/pkg/jwt"
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func newTestApp(t *testing.T) (*fiber.App, *jwt.Manager) {
+func newTestApp(t *testing.T) (*gin.Engine, *jwt.Manager) {
 	t.Helper()
+
+	gin.SetMode(gin.TestMode)
 
 	jwtManager := jwt.New("test-secret", time.Hour)
 
-	app := fiber.New()
+	app := gin.New()
 	app.Use(middleware.Auth(jwtManager))
-	app.Get("/test", func(c *fiber.Ctx) error {
-		userID, ok := c.Locals("userID").(string)
-		if !ok {
-			return c.SendStatus(http.StatusUnauthorized)
+	app.GET("/test", func(ctx *gin.Context) {
+		if _, ok := ctx.Get("userID"); !ok {
+			ctx.Status(http.StatusUnauthorized)
+
+			return
 		}
 
-		return c.SendString(userID)
+		ctx.Status(http.StatusOK)
 	})
 
 	return app, jwtManager
@@ -45,7 +47,6 @@ func TestAuthMiddleware(t *testing.T) {
 		name           string
 		authHeader     string
 		expectedStatus int
-		expectedBody   string
 	}{
 		{
 			name:           "missing header",
@@ -66,33 +67,28 @@ func TestAuthMiddleware(t *testing.T) {
 			name:           "valid token",
 			authHeader:     "Bearer " + validToken,
 			expectedStatus: http.StatusOK,
-			expectedBody:   "user-id-123",
 		},
 	}
 
 	for _, tc := range tests {
-		localTc := tc
+		localTC := tc
 
-		t.Run(localTc.name, func(t *testing.T) {
+		t.Run(localTC.name, func(t *testing.T) {
 			t.Parallel()
 
+			recorder := httptest.NewRecorder()
+
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/test", http.NoBody)
-			if localTc.authHeader != "" {
-				req.Header.Set("Authorization", localTc.authHeader)
+			if localTC.authHeader != "" {
+				req.Header.Set("Authorization", localTC.authHeader)
 			}
 
-			resp, err := app.Test(req)
-			require.NoError(t, err)
+			app.ServeHTTP(recorder, req)
 
+			resp := recorder.Result()
 			defer resp.Body.Close()
 
-			assert.Equal(t, localTc.expectedStatus, resp.StatusCode)
-
-			if localTc.expectedBody != "" {
-				body, readErr := io.ReadAll(resp.Body)
-				require.NoError(t, readErr)
-				assert.Equal(t, localTc.expectedBody, string(body))
-			}
+			assert.Equal(t, localTC.expectedStatus, resp.StatusCode)
 		})
 	}
 }

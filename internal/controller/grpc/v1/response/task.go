@@ -3,8 +3,8 @@ package response
 import (
 	"math"
 
-	v1 "github.com/evrone/go-clean-template/docs/proto/v1"
-	"github.com/evrone/go-clean-template/internal/entity"
+	v1 "github.com/bhcoder23/gin-clean-template/docs/proto/v1"
+	"github.com/bhcoder23/gin-clean-template/internal/entity"
 )
 
 // NewTaskResponse -.

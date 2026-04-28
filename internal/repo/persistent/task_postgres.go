@@ -6,9 +6,9 @@ import (
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/evrone/go-clean-template/internal/entity"
-	"github.com/evrone/go-clean-template/internal/repo"
-	"github.com/evrone/go-clean-template/pkg/postgres"
+	"github.com/bhcoder23/gin-clean-template/internal/entity"
+	"github.com/bhcoder23/gin-clean-template/internal/repo"
+	"github.com/bhcoder23/gin-clean-template/pkg/postgres"
 	"github.com/jackc/pgx/v5"
 )
 

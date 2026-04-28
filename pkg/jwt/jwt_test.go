@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/evrone/go-clean-template/pkg/jwt"
+	"github.com/bhcoder23/gin-clean-template/pkg/jwt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

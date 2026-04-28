@@ -1,25 +1,23 @@
-![Go Clean Template](docs/img/logo.svg)
+![Gin Clean Template](docs/img/logo.svg)
 
-# Go Clean template
+# Gin Clean Template
 
 [🇨🇳 中文](README_CN.md)
 [🇷🇺 RU](README_RU.md)
 
-Clean Architecture template for Golang services
+General-purpose Clean Architecture template for Go backends, maintained by `bhcoder23`.
 
-[![Release](https://img.shields.io/github/v/release/evrone/go-clean-template.svg)](https://github.com/evrone/go-clean-template/releases/)
-[![License](https://img.shields.io/badge/License-MIT-success)](https://github.com/evrone/go-clean-template/blob/master/LICENSE)
-[![Go Report Card](https://goreportcard.com/badge/github.com/evrone/go-clean-template)](https://goreportcard.com/report/github.com/evrone/go-clean-template)
-[![codecov](https://codecov.io/gh/evrone/go-clean-template/branch/master/graph/badge.svg?token=XE3E0X3EVQ)](https://codecov.io/gh/evrone/go-clean-template)
+[![License](https://img.shields.io/badge/License-MIT-success)](LICENSE)
+[![Maintainer](https://img.shields.io/badge/Maintainer-bhcoder23-1f6feb)](https://github.com/bhcoder23)
 
-[![Web Framework](https://img.shields.io/badge/Fiber-Web%20Framework-blue)](https://github.com/gofiber/fiber)
+[![Web Framework](https://img.shields.io/badge/Gin-Web%20Framework-blue)](https://github.com/gin-gonic/gin)
 [![API Documentation](https://img.shields.io/badge/Swagger-API%20Documentation-blue)](https://github.com/swaggo/swag)
 [![Validation](https://img.shields.io/badge/Validator-Data%20Integrity-blue)](https://github.com/go-playground/validator)
 [![JSON Handling](https://img.shields.io/badge/Go--JSON-Fast%20Serialization-blue)](https://github.com/goccy/go-json)
 [![Query Builder](https://img.shields.io/badge/Squirrel-SQL%20Query%20Builder-blue)](https://github.com/Masterminds/squirrel)
 [![Database Migrations](https://img.shields.io/badge/Migrations-Seamless%20Schema%20Updates-blue)](https://github.com/golang-migrate/migrate)
 [![Logging](https://img.shields.io/badge/ZeroLog-Structured%20Logging-blue)](https://github.com/rs/zerolog)
-[![Metrics](https://img.shields.io/badge/Prometheus-Metrics%20Integration-blue)](https://github.com/ansrivas/fiberprometheus)
+[![Metrics](https://img.shields.io/badge/Prometheus-Metrics%20Integration-blue)](https://github.com/prometheus/client_golang)
 [![Testing](https://img.shields.io/badge/Testify-Testing%20Framework-blue)](https://github.com/stretchr/testify)
 [![Mocking](https://img.shields.io/badge/Mock-Mocking%20Library-blue)](https://go.uber.org/mock)
 
@@ -33,8 +31,10 @@ The purpose of the template is to show:
 
 Using the principles of Robert Martin (aka Uncle Bob).
 
-[Go-clean-template](https://evrone.com/go-clean-template?utm_source=github&utm_campaign=go-clean-template) is created &
-supported by [Evrone](https://evrone.com/?utm_source=github&utm_campaign=go-clean-template).
+This repository is the Gin-based backend scaffold maintained by `bhcoder23`.
+
+Inspired by the original MIT-licensed project:
+- [evrone/go-clean-template](https://github.com/evrone/go-clean-template)
 
 This template implements four types of servers:
 
@@ -43,9 +43,10 @@ This template implements four types of servers:
 - MQ RPC (based on NATS as [transport](https://github.com/nats-io/nats.go)
   and [Request-Reply pattern](https://www.enterpriseintegrationpatterns.com/patterns/messaging/RequestReply.html))
 - gRPC ([gRPC](https://grpc.io/) framework based on protobuf)
-- REST API ([Fiber](https://github.com/gofiber/fiber) framework)
+- REST API ([Gin](https://github.com/gin-gonic/gin) framework)
 
-The template includes three domains to demonstrate multi-service architecture:
+The template includes three domains to demonstrate multi-service architecture.
+They are sample domains for the scaffold, not required product boundaries:
 
 - **User Authentication** — registration, login, JWT-based authorization
 - **Task Management** — CRUD operations with status transitions (todo, in_progress, done)
@@ -108,6 +109,8 @@ Text translation via external API with history tracking.
 ## Quick start
 
 ### Local development
+
+Docker is optional. If Postgres, RabbitMQ, and NATS already run elsewhere, point the env vars to those services and use `make run`.
 
 ```sh
 # Postgres, RabbitMQ, NATS
@@ -221,7 +224,7 @@ Server handler layer (MVC controllers). The template shows 4 servers:
 - AMQP RPC (based on RabbitMQ as transport)
 - NATS RPC (based on NATS as transport)
 - gRPC ([gRPC](https://grpc.io/) framework based on protobuf)
-- REST API ([Fiber](https://github.com/gofiber/fiber) framework)
+- REST API ([Gin](https://github.com/gin-gonic/gin) framework)
 
 Server routers are written in the same style:
 
@@ -305,7 +308,7 @@ apiV2Group := app.Group("/v2")
 }
 ```
 
-Instead of [Fiber](https://github.com/gofiber/fiber), you can use any other http framework.
+Instead of [Gin](https://github.com/gin-gonic/gin), you can use any other http framework.
 
 In `router.go` and above the handler methods, there are comments for generating swagger documentation
 using [swag](https://github.com/swaggo/swag).

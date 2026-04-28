@@ -4,11 +4,11 @@ package httpserver
 import (
 	"context"
 	"errors"
+	"net/http"
 	"time"
 
-	"github.com/evrone/go-clean-template/pkg/logger"
-	"github.com/goccy/go-json"
-	"github.com/gofiber/fiber/v2"
+	"github.com/bhcoder23/gin-clean-template/pkg/logger"
+	"github.com/gin-gonic/gin"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -21,14 +21,13 @@ const (
 
 // Server -.
 type Server struct {
-	ctx context.Context
-	eg  *errgroup.Group
+	eg *errgroup.Group
 
-	App    *fiber.App
-	notify chan error
+	App        *gin.Engine
+	httpServer *http.Server
+	notify     chan error
 
 	address         string
-	prefork         bool
 	readTimeout     time.Duration
 	writeTimeout    time.Duration
 	shutdownTimeout time.Duration
@@ -38,13 +37,13 @@ type Server struct {
 
 // New -.
 func New(l logger.Interface, opts ...Option) *Server {
-	group, ctx := errgroup.WithContext(context.Background())
-	group.SetLimit(1) // Run only one goroutine
+	group := new(errgroup.Group)
+	group.SetLimit(1)
 
 	s := &Server{
-		ctx:             ctx,
 		eg:              group,
 		App:             nil,
+		httpServer:      nil,
 		notify:          make(chan error, 1),
 		address:         _defaultAddr,
 		readTimeout:     _defaultReadTimeout,
@@ -53,20 +52,19 @@ func New(l logger.Interface, opts ...Option) *Server {
 		logger:          l,
 	}
 
-	// Custom options
 	for _, opt := range opts {
 		opt(s)
 	}
 
-	app := fiber.New(fiber.Config{
-		Prefork:      s.prefork,
-		ReadTimeout:  s.readTimeout,
-		WriteTimeout: s.writeTimeout,
-		JSONDecoder:  json.Unmarshal,
-		JSONEncoder:  json.Marshal,
-	})
-
+	app := gin.New()
 	s.App = app
+	s.httpServer = &http.Server{
+		Addr:              s.address,
+		Handler:           app,
+		ReadHeaderTimeout: s.readTimeout,
+		ReadTimeout:       s.readTimeout,
+		WriteTimeout:      s.writeTimeout,
+	}
 
 	return s
 }
@@ -74,8 +72,8 @@ func New(l logger.Interface, opts ...Option) *Server {
 // Start -.
 func (s *Server) Start() {
 	s.eg.Go(func() error {
-		err := s.App.Listen(s.address)
-		if err != nil {
+		err := s.httpServer.ListenAndServe()
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			s.notify <- err
 
 			close(s.notify)
@@ -98,14 +96,16 @@ func (s *Server) Notify() <-chan error {
 func (s *Server) Shutdown() error {
 	var shutdownErrors []error
 
-	err := s.App.ShutdownWithTimeout(s.shutdownTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), s.shutdownTimeout)
+	defer cancel()
+
+	err := s.httpServer.Shutdown(ctx)
 	if err != nil && !errors.Is(err, context.Canceled) {
-		s.logger.Error(err, "restapi server - Server - Shutdown - s.App.ShutdownWithTimeout")
+		s.logger.Error(err, "restapi server - Server - Shutdown - s.httpServer.Shutdown")
 
 		shutdownErrors = append(shutdownErrors, err)
 	}
 
-	// Wait for all goroutines to finish and get any error
 	err = s.eg.Wait()
 	if err != nil && !errors.Is(err, context.Canceled) {
 		s.logger.Error(err, "restapi server - Server - Shutdown - s.eg.Wait")

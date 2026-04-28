@@ -3,22 +3,23 @@ package restapi
 import (
 	"net/http"
 
-	"github.com/ansrivas/fiberprometheus/v2"
-	"github.com/evrone/go-clean-template/config"
-	_ "github.com/evrone/go-clean-template/docs" // Swagger docs.
-	"github.com/evrone/go-clean-template/internal/controller/restapi/middleware"
-	v1 "github.com/evrone/go-clean-template/internal/controller/restapi/v1"
-	"github.com/evrone/go-clean-template/internal/usecase"
-	"github.com/evrone/go-clean-template/pkg/jwt"
-	"github.com/evrone/go-clean-template/pkg/logger"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/swagger"
+	"github.com/bhcoder23/gin-clean-template/config"
+	_ "github.com/bhcoder23/gin-clean-template/docs" // Swagger docs.
+	"github.com/bhcoder23/gin-clean-template/internal/controller/restapi/middleware"
+	v1 "github.com/bhcoder23/gin-clean-template/internal/controller/restapi/v1"
+	"github.com/bhcoder23/gin-clean-template/internal/usecase"
+	"github.com/bhcoder23/gin-clean-template/pkg/jwt"
+	"github.com/bhcoder23/gin-clean-template/pkg/logger"
+	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 // NewRouter -.
 // Swagger spec:
 //
-//	@title       Go Clean Template API
+//	@title       Gin Clean Template API
 //	@description Multi-domain clean architecture template with translation, user, and task management
 //	@version     1.0
 //	@host        localhost:8080
@@ -26,29 +27,21 @@ import (
 //	@securityDefinitions.apikey BearerAuth
 //	@in header
 //	@name Authorization
-func NewRouter(app *fiber.App, cfg *config.Config, t usecase.Translation, u usecase.User, tk usecase.Task, jwtManager *jwt.Manager, l logger.Interface) {
-	// Options
-	app.Use(middleware.Logger(l))
-	app.Use(middleware.Recovery(l))
+func NewRouter(app *gin.Engine, cfg *config.Config, t usecase.Translation, u usecase.User, tk usecase.Task, jwtManager *jwt.Manager, l logger.Interface) {
+	app.Use(middleware.Logger(l), middleware.Recovery(l))
 
-	// Prometheus metrics
 	if cfg.Metrics.Enabled {
-		prometheus := fiberprometheus.New("my-service-name")
-		prometheus.RegisterAt(app, "/metrics")
-		app.Use(prometheus.Middleware)
+		app.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	}
 
-	// Swagger
 	if cfg.Swagger.Enabled {
-		app.Get("/swagger/*", swagger.HandlerDefault)
+		app.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
 
-	// K8s probe
-	app.Get("/healthz", func(ctx *fiber.Ctx) error { return ctx.SendStatus(http.StatusOK) })
+	app.GET("/healthz", func(ctx *gin.Context) {
+		ctx.Status(http.StatusOK)
+	})
 
-	// Routers
 	apiV1Group := app.Group("/v1")
-	{
-		v1.NewRoutes(apiV1Group, t, u, tk, jwtManager, l)
-	}
+	v1.NewRoutes(apiV1Group, t, u, tk, jwtManager, l)
 }

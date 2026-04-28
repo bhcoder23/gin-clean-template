@@ -7,24 +7,24 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/evrone/go-clean-template/config"
-	amqprpc "github.com/evrone/go-clean-template/internal/controller/amqp_rpc"
-	"github.com/evrone/go-clean-template/internal/controller/grpc"
-	grpcmw "github.com/evrone/go-clean-template/internal/controller/grpc/middleware"
-	natsrpc "github.com/evrone/go-clean-template/internal/controller/nats_rpc"
-	"github.com/evrone/go-clean-template/internal/controller/restapi"
-	"github.com/evrone/go-clean-template/internal/repo/persistent"
-	"github.com/evrone/go-clean-template/internal/repo/webapi"
-	"github.com/evrone/go-clean-template/internal/usecase/task"
-	"github.com/evrone/go-clean-template/internal/usecase/translation"
-	"github.com/evrone/go-clean-template/internal/usecase/user"
-	"github.com/evrone/go-clean-template/pkg/grpcserver"
-	"github.com/evrone/go-clean-template/pkg/httpserver"
-	"github.com/evrone/go-clean-template/pkg/jwt"
-	"github.com/evrone/go-clean-template/pkg/logger"
-	natsRPCServer "github.com/evrone/go-clean-template/pkg/nats/nats_rpc/server"
-	"github.com/evrone/go-clean-template/pkg/postgres"
-	rmqRPCServer "github.com/evrone/go-clean-template/pkg/rabbitmq/rmq_rpc/server"
+	"github.com/bhcoder23/gin-clean-template/config"
+	amqprpc "github.com/bhcoder23/gin-clean-template/internal/controller/amqp_rpc"
+	"github.com/bhcoder23/gin-clean-template/internal/controller/grpc"
+	grpcmw "github.com/bhcoder23/gin-clean-template/internal/controller/grpc/middleware"
+	natsrpc "github.com/bhcoder23/gin-clean-template/internal/controller/nats_rpc"
+	"github.com/bhcoder23/gin-clean-template/internal/controller/restapi"
+	"github.com/bhcoder23/gin-clean-template/internal/repo/persistent"
+	"github.com/bhcoder23/gin-clean-template/internal/repo/webapi"
+	"github.com/bhcoder23/gin-clean-template/internal/usecase/task"
+	"github.com/bhcoder23/gin-clean-template/internal/usecase/translation"
+	"github.com/bhcoder23/gin-clean-template/internal/usecase/user"
+	"github.com/bhcoder23/gin-clean-template/pkg/grpcserver"
+	"github.com/bhcoder23/gin-clean-template/pkg/httpserver"
+	"github.com/bhcoder23/gin-clean-template/pkg/jwt"
+	"github.com/bhcoder23/gin-clean-template/pkg/logger"
+	natsRPCServer "github.com/bhcoder23/gin-clean-template/pkg/nats/nats_rpc/server"
+	"github.com/bhcoder23/gin-clean-template/pkg/postgres"
+	rmqRPCServer "github.com/bhcoder23/gin-clean-template/pkg/rabbitmq/rmq_rpc/server"
 	pbgrpc "google.golang.org/grpc"
 )
 
@@ -78,7 +78,7 @@ func initServers(cfg *config.Config, uc useCases, jwtManager *jwt.Manager, l log
 	grpc.NewRouter(grpcServer.App, uc.translation, uc.user, uc.task, l)
 
 	// HTTP Server
-	httpServer := httpserver.New(l, httpserver.Port(cfg.HTTP.Port), httpserver.Prefork(cfg.HTTP.UsePreforkMode))
+	httpServer := httpserver.New(l, httpserver.Port(cfg.HTTP.Port))
 	restapi.NewRouter(httpServer.App, cfg, uc.translation, uc.user, uc.task, jwtManager, l)
 
 	return servers{

@@ -1,22 +1,20 @@
-![Go Clean Template](docs/img/logo.svg)
+![Gin Clean Template](docs/img/logo.svg)
 
-# Go Чистая Архитектура
+# Gin Чистая Архитектура
 
-Шаблон Чистой Архитектуры для приложений на Golang
+Универсальный шаблон Чистой Архитектуры для Go-бэкендов, поддерживаемый `bhcoder23`.
 
-[![Release](https://img.shields.io/github/v/release/evrone/go-clean-template.svg)](https://github.com/evrone/go-clean-template/releases/)
-[![License](https://img.shields.io/badge/License-MIT-success)](https://github.com/evrone/go-clean-template/blob/master/LICENSE)
-[![Go Report Card](https://goreportcard.com/badge/github.com/evrone/go-clean-template)](https://goreportcard.com/report/github.com/evrone/go-clean-template)
-[![codecov](https://codecov.io/gh/evrone/go-clean-template/branch/master/graph/badge.svg?token=XE3E0X3EVQ)](https://codecov.io/gh/evrone/go-clean-template)
+[![License](https://img.shields.io/badge/License-MIT-success)](LICENSE)
+[![Maintainer](https://img.shields.io/badge/Maintainer-bhcoder23-1f6feb)](https://github.com/bhcoder23)
 
-[![Web Framework](https://img.shields.io/badge/Fiber-Web%20Framework-blue)](https://github.com/gofiber/fiber)
+[![Web Framework](https://img.shields.io/badge/Gin-Web%20Framework-blue)](https://github.com/gin-gonic/gin)
 [![API Documentation](https://img.shields.io/badge/Swagger-API%20Documentation-blue)](https://github.com/swaggo/swag)
 [![Validation](https://img.shields.io/badge/Validator-Data%20Integrity-blue)](https://github.com/go-playground/validator)
 [![JSON Handling](https://img.shields.io/badge/Go--JSON-Fast%20Serialization-blue)](https://github.com/goccy/go-json)
 [![Query Builder](https://img.shields.io/badge/Squirrel-SQL%20Query%20Builder-blue)](https://github.com/Masterminds/squirrel)
 [![Database Migrations](https://img.shields.io/badge/Migrations-Seamless%20Schema%20Updates-blue)](https://github.com/golang-migrate/migrate)
 [![Logging](https://img.shields.io/badge/ZeroLog-Structured%20Logging-blue)](https://github.com/rs/zerolog)
-[![Metrics](https://img.shields.io/badge/Prometheus-Metrics%20Integration-blue)](https://github.com/ansrivas/fiberprometheus)
+[![Metrics](https://img.shields.io/badge/Prometheus-Metrics%20Integration-blue)](https://github.com/prometheus/client_golang)
 [![Testing](https://img.shields.io/badge/Testify-Testing%20Framework-blue)](https://github.com/stretchr/testify)
 [![Mocking](https://img.shields.io/badge/Mock-Mocking%20Library-blue)](https://go.uber.org/mock)
 
@@ -28,8 +26,10 @@
 - где хранить бизнес-логику, чтобы она оставалась независимой, чистой и расширяемой
 - как не потерять контроль при росте проекта
 
-[Go-clean-template](https://evrone.com/go-clean-template?utm_source=github&utm_campaign=go-clean-template) создан и
-поддерживается [Evrone](https://evrone.com/?utm_source=github&utm_campaign=go-clean-template).
+Этот репозиторий — Gin-ориентированный backend-scaffold, поддерживаемый `bhcoder23`.
+
+Основан на оригинальном проекте под лицензией MIT:
+- [evrone/go-clean-template](https://github.com/evrone/go-clean-template)
 
 Этот шаблон поддерживает четыре типа серверов:
 
@@ -38,9 +38,10 @@
 - NATS RPC (на основе NATS в качестве [транспорта](https://github.com/nats-io/nats.go)
   и [Request-Reply паттерна]((https://www.enterpriseintegrationpatterns.com/patterns/messaging/RequestReply.html))))
 - gRPC ([gRPC](https://grpc.io/) фреймворк на основе protobuf)
-- REST API ([Fiber](https://github.com/gofiber/fiber) фреймворк)
+- REST API ([Gin](https://github.com/gin-gonic/gin) фреймворк)
 
-Шаблон включает три домена для демонстрации многосервисной архитектуры:
+Шаблон включает три домена для демонстрации многосервисной архитектуры.
+Это демонстрационные домены для scaffold, а не обязательные продуктовые границы:
 
 - **Аутентификация пользователей** — регистрация, вход, авторизация на основе JWT
 - **Управление задачами** — CRUD-операции с переходами статусов (todo, in_progress, done)
@@ -103,6 +104,8 @@ CRUD-операции со стейт-машиной статусов.
 ## Быстрый старт
 
 ### Локальная разработка
+
+Docker не обязателен. Если Postgres, RabbitMQ и NATS уже запущены отдельно, достаточно настроить переменные окружения и выполнить `make run`.
 
 ```sh
 # Postgres, RabbitMQ, NATS
@@ -216,7 +219,7 @@ go run -tags migrate ./cmd/app
 - AMQP RPC (на основе RabbitMQ в качестве транспорта)
 - NATS RPC (на основе NATS в качестве транспорта)
 - gRPC ([gRPC](https://grpc.io/) фреймворк на основе protobuf)
-- REST API ([Fiber](https://github.com/gofiber/fiber) фреймворк)
+- REST API ([Gin](https://github.com/gin-gonic/gin) фреймворк)
 
 Маршрутизаторы http сервера пишутся в едином стиле:
 
@@ -300,7 +303,7 @@ apiV2Group := app.Group("/v2")
 }
 ```
 
-Вместо [Fiber](https://github.com/gofiber/fiber) можно использовать любой другой http фреймворк.
+Вместо [Gin](https://github.com/gin-gonic/gin) можно использовать любой другой http фреймворк.
 
 В файле `router.go` над хэндлером написаны комментарии для генерации документации через
 swagger [swag](https://github.com/swaggo/swag).

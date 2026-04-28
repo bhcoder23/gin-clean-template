@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/evrone/go-clean-template/internal/entity"
-	"github.com/evrone/go-clean-template/internal/usecase/user"
-	"github.com/evrone/go-clean-template/pkg/jwt"
+	"github.com/bhcoder23/gin-clean-template/internal/entity"
+	"github.com/bhcoder23/gin-clean-template/internal/usecase/user"
+	"github.com/bhcoder23/gin-clean-template/pkg/jwt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"net"
 
-	"github.com/evrone/go-clean-template/pkg/logger"
+	"github.com/bhcoder23/gin-clean-template/pkg/logger"
 	"golang.org/x/sync/errgroup"
 	pbgrpc "google.golang.org/grpc"
 )

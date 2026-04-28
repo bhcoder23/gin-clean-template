@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/evrone/go-clean-template/internal/controller/nats_rpc/v1/request"
-	"github.com/evrone/go-clean-template/internal/controller/nats_rpc/v1/response"
-	"github.com/evrone/go-clean-template/pkg/nats/nats_rpc/server"
+	"github.com/bhcoder23/gin-clean-template/internal/controller/nats_rpc/v1/request"
+	"github.com/bhcoder23/gin-clean-template/internal/controller/nats_rpc/v1/response"
+	"github.com/bhcoder23/gin-clean-template/pkg/nats/nats_rpc/server"
 	"github.com/goccy/go-json"
 	"github.com/nats-io/nats.go"
 )

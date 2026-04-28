@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/evrone/go-clean-template/internal/entity"
-	"github.com/evrone/go-clean-template/internal/repo"
+	"github.com/bhcoder23/gin-clean-template/internal/entity"
+	"github.com/bhcoder23/gin-clean-template/internal/repo"
 	"github.com/google/uuid"
 )
 

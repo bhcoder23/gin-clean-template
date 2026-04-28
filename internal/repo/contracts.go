@@ -4,10 +4,10 @@ package repo
 import (
 	"context"
 
-	"github.com/evrone/go-clean-template/internal/entity"
+	"github.com/bhcoder23/gin-clean-template/internal/entity"
 )
 
-//go:generate mockgen -source=contracts.go -destination=../usecase/mocks_repo_test.go -package=usecase_test
+//go:generate go tool mockgen -source=contracts.go -destination=../usecase/mocks_repo_test.go -package=usecase_test
 
 type (
 	// TranslationRepo -.

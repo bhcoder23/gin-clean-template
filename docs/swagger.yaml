@@ -188,7 +188,7 @@ info:
   contact: {}
   description: Multi-domain clean architecture template with translation, user, and
     task management
-  title: Go Clean Template API
+  title: Gin Clean Template API
   version: "1.0"
 paths:
   /auth/login:

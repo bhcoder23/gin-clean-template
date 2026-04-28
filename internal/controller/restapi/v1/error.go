@@ -1,10 +1,10 @@
 package v1
 
 import (
-	"github.com/evrone/go-clean-template/internal/controller/restapi/v1/response"
-	"github.com/gofiber/fiber/v2"
+	"github.com/bhcoder23/gin-clean-template/internal/controller/restapi/v1/response"
+	"github.com/gin-gonic/gin"
 )
 
-func errorResponse(ctx *fiber.Ctx, code int, msg string) error {
-	return ctx.Status(code).JSON(response.Error{Error: msg})
+func errorResponse(ctx *gin.Context, code int, msg string) {
+	ctx.AbortWithStatusJSON(code, response.Error{Error: msg})
 }

@@ -4,32 +4,30 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/evrone/go-clean-template/pkg/logger"
-	"github.com/gofiber/fiber/v2"
+	"github.com/bhcoder23/gin-clean-template/pkg/logger"
+	"github.com/gin-gonic/gin"
 )
 
-func buildRequestMessage(ctx *fiber.Ctx) string {
+func buildRequestMessage(ctx *gin.Context) string {
 	var result strings.Builder
 
-	result.WriteString(ctx.IP())
+	result.WriteString(ctx.ClientIP())
 	result.WriteString(" - ")
-	result.WriteString(ctx.Method())
+	result.WriteString(ctx.Request.Method)
 	result.WriteString(" ")
-	result.WriteString(ctx.OriginalURL())
+	result.WriteString(ctx.Request.URL.RequestURI())
 	result.WriteString(" - ")
-	result.WriteString(strconv.Itoa(ctx.Response().StatusCode()))
+	result.WriteString(strconv.Itoa(ctx.Writer.Status()))
 	result.WriteString(" ")
-	result.WriteString(strconv.Itoa(len(ctx.Response().Body())))
+	result.WriteString(strconv.Itoa(ctx.Writer.Size()))
 
 	return result.String()
 }
 
-func Logger(l logger.Interface) func(c *fiber.Ctx) error {
-	return func(ctx *fiber.Ctx) error {
-		err := ctx.Next()
-
+// Logger logs request metadata after the handler chain finishes.
+func Logger(l logger.Interface) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		ctx.Next()
 		l.Info("%s", buildRequestMessage(ctx))
-
-		return err
 	}
 }

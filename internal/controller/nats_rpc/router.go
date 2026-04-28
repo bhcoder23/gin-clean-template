@@ -1,11 +1,11 @@
 package v1
 
 import (
-	v1 "github.com/evrone/go-clean-template/internal/controller/nats_rpc/v1"
-	"github.com/evrone/go-clean-template/internal/usecase"
-	"github.com/evrone/go-clean-template/pkg/jwt"
-	"github.com/evrone/go-clean-template/pkg/logger"
-	"github.com/evrone/go-clean-template/pkg/nats/nats_rpc/server"
+	v1 "github.com/bhcoder23/gin-clean-template/internal/controller/nats_rpc/v1"
+	"github.com/bhcoder23/gin-clean-template/internal/usecase"
+	"github.com/bhcoder23/gin-clean-template/pkg/jwt"
+	"github.com/bhcoder23/gin-clean-template/pkg/logger"
+	"github.com/bhcoder23/gin-clean-template/pkg/nats/nats_rpc/server"
 )
 
 // NewRouter -.

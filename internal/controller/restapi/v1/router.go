@@ -1,46 +1,37 @@
 package v1
 
 import (
-	"github.com/evrone/go-clean-template/internal/controller/restapi/middleware"
-	"github.com/evrone/go-clean-template/internal/usecase"
-	"github.com/evrone/go-clean-template/pkg/jwt"
-	"github.com/evrone/go-clean-template/pkg/logger"
+	"github.com/bhcoder23/gin-clean-template/internal/controller/restapi/middleware"
+	"github.com/bhcoder23/gin-clean-template/internal/usecase"
+	"github.com/bhcoder23/gin-clean-template/pkg/jwt"
+	"github.com/bhcoder23/gin-clean-template/pkg/logger"
+	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
-	"github.com/gofiber/fiber/v2"
 )
 
 // NewRoutes -.
-func NewRoutes(apiV1Group fiber.Router, t usecase.Translation, u usecase.User, tk usecase.Task, jwtManager *jwt.Manager, l logger.Interface) {
+func NewRoutes(apiV1Group *gin.RouterGroup, t usecase.Translation, u usecase.User, tk usecase.Task, jwtManager *jwt.Manager, l logger.Interface) {
 	r := &V1{t: t, u: u, tk: tk, l: l, v: validator.New(validator.WithRequiredStructEnabled())}
 
-	// Public routes
 	authGroup := apiV1Group.Group("/auth")
-	{
-		authGroup.Post("/register", r.register)
-		authGroup.Post("/login", r.login)
-	}
+	authGroup.POST("/register", r.register)
+	authGroup.POST("/login", r.login)
 
-	// Protected routes
-	protected := apiV1Group.Group("", middleware.Auth(jwtManager))
+	protected := apiV1Group.Group("")
+	protected.Use(middleware.Auth(jwtManager))
 
 	userGroup := protected.Group("/user")
-	{
-		userGroup.Get("/profile", r.profile)
-	}
+	userGroup.GET("/profile", r.profile)
 
 	taskGroup := protected.Group("/tasks")
-	{
-		taskGroup.Post("/", r.createTask)
-		taskGroup.Get("/", r.listTasks)
-		taskGroup.Get("/:id", r.getTask)
-		taskGroup.Put("/:id", r.updateTask)
-		taskGroup.Patch("/:id/status", r.transitionTask)
-		taskGroup.Delete("/:id", r.deleteTask)
-	}
+	taskGroup.POST("/", r.createTask)
+	taskGroup.GET("/", r.listTasks)
+	taskGroup.GET("/:id", r.getTask)
+	taskGroup.PUT("/:id", r.updateTask)
+	taskGroup.PATCH("/:id/status", r.transitionTask)
+	taskGroup.DELETE("/:id", r.deleteTask)
 
 	translationGroup := protected.Group("/translation")
-	{
-		translationGroup.Get("/history", r.history)
-		translationGroup.Post("/do-translate", r.doTranslate)
-	}
+	translationGroup.GET("/history", r.history)
+	translationGroup.POST("/do-translate", r.doTranslate)
 }

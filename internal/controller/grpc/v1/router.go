@@ -1,9 +1,9 @@
 package v1
 
 import (
-	v1 "github.com/evrone/go-clean-template/docs/proto/v1"
-	"github.com/evrone/go-clean-template/internal/usecase"
-	"github.com/evrone/go-clean-template/pkg/logger"
+	v1 "github.com/bhcoder23/gin-clean-template/docs/proto/v1"
+	"github.com/bhcoder23/gin-clean-template/internal/usecase"
+	"github.com/bhcoder23/gin-clean-template/pkg/logger"
 	"github.com/go-playground/validator/v10"
 	pbgrpc "google.golang.org/grpc"
 )
