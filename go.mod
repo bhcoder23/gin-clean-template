@@ -17,7 +17,7 @@ tool (
 require (
 	github.com/Conight/go-googletrans v0.3.0
 	github.com/Masterminds/squirrel v1.5.4
-	github.com/caarlos0/env/v11 v11.4.0
+	github.com/caarlos0/env/v11 v11.4.1
 	github.com/gin-gonic/gin v1.12.0
 	github.com/go-playground/validator/v10 v10.30.2
 	github.com/goccy/go-json v0.10.6
