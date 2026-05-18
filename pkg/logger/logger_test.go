@@ -5,7 +5,6 @@ import (
 	"errors"
 	"os"
 	"os/exec"
-	"regexp"
 	"strings"
 	"testing"
 
@@ -18,8 +17,6 @@ var errTest = errors.New("test error")
 func newBufferedLogger(level string) (*Logger, *bytes.Buffer) {
 	l := New(level)
 	buf := &bytes.Buffer{}
-	// Recreate the zerolog.Logger to write into buffer while keeping similar options
-	// We keep the same skip frame count so caller field exists, but we don't assert its value
 	zl := zerolog.New(buf).With().Timestamp().Logger()
 	l.logger = new(zl)
 
@@ -103,67 +100,96 @@ func TestDebug_RespectsLevel(t *testing.T) {
 	}
 }
 
-func TestError_LogsErrorAndDebugWhenDebugLevel(t *testing.T) {
+func TestError_StringMessage(t *testing.T) {
 	t.Parallel()
 
-	// info mode => only error
 	l, buf := newBufferedLogger("info")
 	l.Error("boom")
 
 	out := buf.String()
 
-	if strings.Count(out, "\"level\":\"error\"") != 1 {
-		t.Fatalf("expected 1 error log at info level, got: %s", out)
+	if !strings.Contains(out, "\"level\":\"error\"") {
+		t.Fatalf("expected error level, got: %s", out)
 	}
 
-	if strings.Contains(out, "\"level\":\"debug\"") {
-		t.Fatalf("did not expect debug log at info level, got: %s", out)
-	}
-
-	// debug mode => error + debug (side effect)
-	l, buf = newBufferedLogger("debug")
-	l.Error("boom2")
-
-	out = buf.String()
-
-	if strings.Count(out, "\"level\":\"error\"") != 1 {
-		t.Fatalf("expected 1 error log at debug level, got: %s", out)
-	}
-
-	if strings.Contains(out, "\"level\":\"debug\"") {
-		t.Fatalf("expected 1 debug side-effect log at debug level, got: %s", out)
+	if !strings.Contains(out, "\"message\":\"boom\"") {
+		t.Fatalf("expected message field, got: %s", out)
 	}
 }
 
-func TestMsg_TypeSwitch(t *testing.T) {
+func TestError_ErrorValueWithoutContext(t *testing.T) {
+	t.Parallel()
+
+	l, buf := newBufferedLogger("info")
+	l.Error(errTest)
+
+	out := buf.String()
+
+	if !strings.Contains(out, "\"level\":\"error\"") {
+		t.Fatalf("expected error level, got: %s", out)
+	}
+
+	if !strings.Contains(out, "\"message\":\"test error\"") {
+		t.Fatalf("expected error message, got: %s", out)
+	}
+
+	if !strings.Contains(out, "\"error\":\"test error\"") {
+		t.Fatalf("expected structured error field, got: %s", out)
+	}
+}
+
+func TestError_ErrorValueWithContext(t *testing.T) {
+	t.Parallel()
+
+	l, buf := newBufferedLogger("info")
+	l.Error(errTest, "restapi - v1 - login")
+
+	out := buf.String()
+
+	if !strings.Contains(out, "\"message\":\"restapi - v1 - login\"") {
+		t.Fatalf("expected context message, got: %s", out)
+	}
+
+	if !strings.Contains(out, "\"error\":\"test error\"") {
+		t.Fatalf("expected structured error field, got: %s", out)
+	}
+
+	if strings.Contains(out, "%!(EXTRA") {
+		t.Fatalf("unexpected fmt extra marker in output: %s", out)
+	}
+}
+
+func TestError_ErrorValueWithFormattedContext(t *testing.T) {
+	t.Parallel()
+
+	l, buf := newBufferedLogger("info")
+	l.Error(errTest, "task %s failed", "task-id-123")
+
+	out := buf.String()
+
+	if !strings.Contains(out, "\"message\":\"task task-id-123 failed\"") {
+		t.Fatalf("expected formatted context message, got: %s", out)
+	}
+
+	if !strings.Contains(out, "\"error\":\"test error\"") {
+		t.Fatalf("expected structured error field, got: %s", out)
+	}
+}
+
+func TestMsg_UnknownTypeFallsBack(t *testing.T) {
 	t.Parallel()
 
 	l, buf := newBufferedLogger("debug")
-
-	// string
-	l.msg(zerolog.InfoLevel, "str msg")
-	l.msg(zerolog.WarnLevel, errTest)
-	// unknown type => should contain fallback text
 	l.msg(zerolog.ErrorLevel, 12345)
 
 	out := buf.String()
 
-	if !strings.Contains(out, "str msg") || !strings.Contains(out, "\"level\":\"info\"") {
-		t.Fatalf("string path not logged as info: %s", out)
+	if !strings.Contains(out, "\"level\":\"error\"") {
+		t.Fatalf("expected error level, got: %s", out)
 	}
 
-	if !strings.Contains(out, errTest.Error()) || !strings.Contains(out, "\"level\":\"warn\"") {
-		t.Fatalf("error path not logged as warn: %s", out)
-	}
-
-	// unknown type message uses format: "%s message %v has unknown type %v"
-	re := regexp.MustCompile(`error message 12345 has unknown type 12345`)
-
-	if !strings.Contains(out, "\"level\":\"error\"") || re.FindStringIndex(out) != nil {
-		// keep the assertion explicit
-		if !strings.Contains(out, "message 12345 has unknown type") {
-			t.Fatalf("unknown type path not logged as expected: %s", out)
-		}
+	if !strings.Contains(out, "message 12345 has unknown type int") {
+		t.Fatalf("expected fallback message, got: %s", out)
 	}
 }
 
@@ -171,10 +197,8 @@ func TestFatal_ExitsAndLogs(t *testing.T) {
 	t.Parallel()
 
 	if os.Getenv("LOGGER_FATAL_SUBPROC") == "1" {
-		// child process: run Fatal and exit
-		l, _ := newBufferedLogger("debug")
-		// write to stdout so parent can see the log via OS pipe; our logger writes to buffer, but fatal still logs
-		l.Fatal("fatal now")
+		l := New("debug")
+		l.Fatal(errTest, "fatal now")
 
 		return
 	}
@@ -188,10 +212,21 @@ func TestFatal_ExitsAndLogs(t *testing.T) {
 		t.Fatalf("expected non-nil error due to os.Exit in Fatal, got nil; output: %s", string(out))
 	}
 
-	if exitErr, ok := errors.AsType[*exec.ExitError](err); !ok {
-		// Confirm exit code is non-zero; os.Exit(1) specifically
-		if status := exitErr.ExitCode(); status != 1 {
-			t.Fatalf("expected exit code 1, got %d; output: %s", status, string(out))
-		}
+	exitErr, ok := err.(*exec.ExitError)
+	if !ok {
+		t.Fatalf("expected exec.ExitError, got %T", err)
+	}
+
+	if status := exitErr.ExitCode(); status != 1 {
+		t.Fatalf("expected exit code 1, got %d; output: %s", status, string(out))
+	}
+
+	output := string(out)
+	if !strings.Contains(output, "\"message\":\"fatal now\"") {
+		t.Fatalf("expected fatal message in output, got: %s", output)
+	}
+
+	if !strings.Contains(output, "\"error\":\"test error\"") {
+		t.Fatalf("expected structured error field in output, got: %s", output)
 	}
 }

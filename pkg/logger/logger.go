@@ -73,12 +73,12 @@ func (l *Logger) Warn(message string, args ...any) {
 
 // Error -.
 func (l *Logger) Error(message any, args ...any) {
-	l.msg(zerolog.ErrorLevel, message, args...)
+	l.err(zerolog.ErrorLevel, message, args...)
 }
 
 // Fatal -.
 func (l *Logger) Fatal(message any, args ...any) {
-	l.msg(zerolog.FatalLevel, message, args...)
+	l.err(zerolog.FatalLevel, message, args...)
 
 	os.Exit(1)
 }
@@ -98,6 +98,34 @@ func (l *Logger) msg(level zerolog.Level, message any, args ...any) {
 	case string:
 		l.log(level, msg, args...)
 	default:
-		l.log(level, fmt.Sprintf("%s message %v has unknown type %v", level, message, msg), args...)
+		l.log(level, fmt.Sprintf("%s message %v has unknown type %T", level, message, msg), args...)
 	}
+}
+
+func (l *Logger) err(level zerolog.Level, message any, args ...any) {
+	err, ok := message.(error)
+	if !ok {
+		l.msg(level, message, args...)
+
+		return
+	}
+
+	msg := err.Error()
+	formatArgs := args
+
+	if len(args) > 0 {
+		if contextMsg, ok := args[0].(string); ok {
+			msg = contextMsg
+			formatArgs = args[1:]
+		}
+	}
+
+	event := l.logger.WithLevel(level).Err(err)
+	if len(formatArgs) == 0 {
+		event.Msg(msg)
+
+		return
+	}
+
+	event.Msgf(msg, formatArgs...)
 }
