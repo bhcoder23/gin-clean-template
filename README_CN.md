@@ -33,16 +33,14 @@
 参考的原始项目（MIT 协议）：
 - [evrone/go-clean-template](https://github.com/evrone/go-clean-template)
 
-此模板是一个应用进程，外挂多种可选传输适配器：
+此模板是一个应用进程，外挂多种传输适配器：
 
 - AMQP RPC（基于 RabbitMQ 作为传输）
 - NATS RPC（基于 NATS 作为传输）
 - gRPC（基于 protobuf 的 [gRPC](https://grpc.io/) 框架）
 - REST API（基于 [Gin](https://github.com/gin-gonic/gin) 框架）
 
-默认本地开发路径只开启 REST。gRPC、AMQP RPC、NATS RPC 保留为按需启用的示例适配器，派生项目通常只保留自己真正需要的部分。
-
-对大多数派生项目来说，第一步最合理的清理动作，就是直接删掉不会支持的 transport adapter，以及对应的环境变量和 compose 依赖。
+默认本地开发路径会把四种演示 transport 全部打开，让脚手架开箱就能展示完整形态。派生项目仍然应该只保留自己真正需要的 adapter。
 
 模板包含三个领域，用于演示多服务架构。
 它们是脚手架示例领域，并不是必须保留的产品边界：
@@ -55,11 +53,79 @@
 
 ## 内容
 
+- [从这里开始](#从这里开始)
+- [演示链路](#演示链路)
 - [领域](#领域)
 - [快速开始](#快速开始)
 - [工程架构](#工程架构)
 - [依赖注入](#依赖注入)
 - [整洁架构](#整洁架构)
+
+## 从这里开始
+
+第一次体验建议直接走完整演示路径，这样最容易看懂模板到底在展示什么：
+
+```sh
+# 启动 PostgreSQL、RabbitMQ、NATS
+make compose-up
+
+# 执行迁移并启动 REST、gRPC、AMQP RPC、NATS RPC
+make run
+```
+
+服务起来后，最快理解这个脚手架的方式，就是顺着一条完整的 REST 业务链路走一遍。
+
+## 演示链路
+
+注册用户：
+
+```sh
+curl -s http://127.0.0.1:8080/v1/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"johndoe","email":"john@example.com","password":"secret123"}'
+```
+
+登录并取回 JWT：
+
+```sh
+TOKEN=$(
+  curl -s http://127.0.0.1:8080/v1/auth/login \
+    -H 'Content-Type: application/json' \
+    -d '{"email":"john@example.com","password":"secret123"}' | jq -r '.token'
+)
+```
+
+读取当前用户资料：
+
+```sh
+curl -s http://127.0.0.1:8080/v1/user/profile \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+创建任务：
+
+```sh
+curl -s http://127.0.0.1:8080/v1/tasks \
+  -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"title":"Ship the scaffold","description":"Exercise the happy path"}'
+```
+
+查看任务列表：
+
+```sh
+curl -s 'http://127.0.0.1:8080/v1/tasks?limit=10&offset=0' \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+可选的翻译演示：
+
+```sh
+curl -s http://127.0.0.1:8080/v1/translation/do-translate \
+  -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"source":"en","destination":"zh","original":"Clean architecture keeps adapters honest"}'
+```
 
 ## 领域
 
@@ -111,16 +177,16 @@ CRUD 操作，支持状态状态机。
 
 ### Local development
 
-Docker 不是必选项。默认本地路径只需要 PostgreSQL，因为 `.env.example` 默认开启 HTTP、关闭其他 transport。
+Docker 不是必选项。默认本地路径就是完整演示路径，所以 `.env.example` 默认开启 HTTP、gRPC、RabbitMQ RPC、NATS RPC。
 
 ```sh
-# 默认 HTTP 开发只需要 PostgreSQL
+# 完整演示默认需要 PostgreSQL、RabbitMQ、NATS
 make compose-up
 # Run app with migrations
 make run
 ```
 
-如果你想在本地把所有演示 transport 都跑起来，可以修改 `.env`，或者直接执行：
+如果你想忽略当前 `.env`，强制把所有演示 transport 都跑起来，可以直接执行：
 
 ```sh
 make run-all-transports
@@ -185,9 +251,9 @@ make compose-up-all
 默认本地 transport 开关：
 
 - `HTTP_ENABLED=true`
-- `GRPC_ENABLED=false`
-- `RMQ_ENABLED=false`
-- `NATS_ENABLED=false`
+- `GRPC_ENABLED=true`
+- `RMQ_ENABLED=true`
+- `NATS_ENABLED=true`
 
 [docker-compose.yml](docker-compose.yml) 使用 `env` 變數來配置服務。
 

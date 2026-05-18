@@ -19,7 +19,7 @@ func TestNewConfigTransportDefaults(t *testing.T) {
 
 	require.NoError(t, err)
 	require.True(t, cfg.HTTP.Enabled)
-	require.False(t, cfg.GRPC.Enabled)
-	require.False(t, cfg.RMQ.Enabled)
-	require.False(t, cfg.NATS.Enabled)
+	require.True(t, cfg.GRPC.Enabled)
+	require.True(t, cfg.RMQ.Enabled)
+	require.True(t, cfg.NATS.Enabled)
 }

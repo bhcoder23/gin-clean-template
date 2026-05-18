@@ -33,7 +33,7 @@ This repository is the Gin-based backend scaffold maintained by `bhcoder23`.
 Inspired by the original MIT-licensed project:
 - [evrone/go-clean-template](https://github.com/evrone/go-clean-template)
 
-This template is one application process with multiple optional transport adapters:
+This template is one application process with multiple transport adapters:
 
 - AMQP RPC (based on RabbitMQ as [transport](https://github.com/rabbitmq/amqp091-go)
   and [Request-Reply pattern](https://www.enterpriseintegrationpatterns.com/patterns/messaging/RequestReply.html))
@@ -42,9 +42,7 @@ This template is one application process with multiple optional transport adapte
 - gRPC ([gRPC](https://grpc.io/) framework based on protobuf)
 - REST API ([Gin](https://github.com/gin-gonic/gin) framework)
 
-The default local developer path enables REST only. gRPC, AMQP RPC, and NATS RPC remain available as opt-in examples when a derived project actually needs them.
-
-For most derived projects, the right first cleanup is to delete the transport adapters you do not plan to support, along with their env vars and compose dependencies.
+The default local developer path enables all four demo transports so the scaffold can show its full shape out of the box. Derived projects should still keep only the adapters they actually plan to support.
 
 The template includes three domains to demonstrate multi-service architecture.
 They are sample domains for the scaffold, not required product boundaries:
@@ -57,11 +55,79 @@ The demo domains can be exposed through all four transports (REST, gRPC, AMQP RP
 
 ## Content
 
+- [Start here](#start-here)
+- [Demo flow](#demo-flow)
 - [Domains](#domains)
 - [Quick start](#quick-start)
 - [Project structure](#project-structure)
 - [Dependency Injection](#dependency-injection)
 - [Clean Architecture](#clean-architecture)
+
+## Start here
+
+Use the full demo path first. It exercises the template the way it is designed to be read:
+
+```sh
+# Start PostgreSQL, RabbitMQ, and NATS
+make compose-up
+
+# Run migrations and start REST, gRPC, AMQP RPC, and NATS RPC
+make run
+```
+
+Once the app is running, the fastest way to understand the scaffold is to walk one complete REST flow end to end.
+
+## Demo flow
+
+Register a user:
+
+```sh
+curl -s http://127.0.0.1:8080/v1/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"johndoe","email":"john@example.com","password":"secret123"}'
+```
+
+Log in and capture the JWT:
+
+```sh
+TOKEN=$(
+  curl -s http://127.0.0.1:8080/v1/auth/login \
+    -H 'Content-Type: application/json' \
+    -d '{"email":"john@example.com","password":"secret123"}' | jq -r '.token'
+)
+```
+
+Read the authenticated profile:
+
+```sh
+curl -s http://127.0.0.1:8080/v1/user/profile \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Create a task:
+
+```sh
+curl -s http://127.0.0.1:8080/v1/tasks \
+  -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"title":"Ship the scaffold","description":"Exercise the happy path"}'
+```
+
+List tasks:
+
+```sh
+curl -s 'http://127.0.0.1:8080/v1/tasks?limit=10&offset=0' \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Optional translation demo:
+
+```sh
+curl -s http://127.0.0.1:8080/v1/translation/do-translate \
+  -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"source":"en","destination":"zh","original":"Clean architecture keeps adapters honest"}'
+```
 
 ## Domains
 
@@ -113,19 +179,19 @@ This adapter is intentionally demonstrative. Derived projects should replace it 
 
 ### Local development
 
-Docker is optional. The default local path only needs PostgreSQL because `.env.example` enables HTTP and disables the other transports.
+Docker is optional. The default local path is the full demo path, so `.env.example` enables HTTP, gRPC, RabbitMQ RPC, and NATS RPC.
 
 ```sh
-# PostgreSQL for default HTTP development
+# PostgreSQL, RabbitMQ, and NATS for the full demo
 make compose-up
 # Run app with migrations
 make run
 ```
 
-To run every demo transport locally, either update `.env` or use:
+To force all demo transports on regardless of your current `.env`, use:
 
 ```sh
-HTTP_ENABLED=true GRPC_ENABLED=true RMQ_ENABLED=true NATS_ENABLED=true make run-all-transports
+make run-all-transports
 ```
 
 ### Integration tests (can be run in CI)
@@ -189,9 +255,9 @@ Example: [.env.example](.env.example)
 Default local transport flags:
 
 - `HTTP_ENABLED=true`
-- `GRPC_ENABLED=false`
-- `RMQ_ENABLED=false`
-- `NATS_ENABLED=false`
+- `GRPC_ENABLED=true`
+- `RMQ_ENABLED=true`
+- `NATS_ENABLED=true`
 
 [docker-compose.yml](docker-compose.yml) uses `env` variables to configure services.
 

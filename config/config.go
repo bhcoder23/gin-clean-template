@@ -47,13 +47,13 @@ type (
 
 	// GRPC -.
 	GRPC struct {
-		Enabled bool   `env:"GRPC_ENABLED" envDefault:"false"`
+		Enabled bool   `env:"GRPC_ENABLED" envDefault:"true"`
 		Port    string `env:"GRPC_PORT"    envDefault:"8081"`
 	}
 
 	// RMQ -.
 	RMQ struct {
-		Enabled        bool   `env:"RMQ_ENABLED"    envDefault:"false"`
+		Enabled        bool   `env:"RMQ_ENABLED"    envDefault:"true"`
 		ServerExchange string `env:"RMQ_RPC_SERVER" envDefault:"rpc_server"`
 		ClientExchange string `env:"RMQ_RPC_CLIENT" envDefault:"rpc_client"`
 		URL            string `env:"RMQ_URL"        envDefault:"amqp://guest:guest@localhost:5672/"`
@@ -61,7 +61,7 @@ type (
 
 	// NATS -.
 	NATS struct {
-		Enabled        bool   `env:"NATS_ENABLED"    envDefault:"false"`
+		Enabled        bool   `env:"NATS_ENABLED"    envDefault:"true"`
 		ServerExchange string `env:"NATS_RPC_SERVER" envDefault:"rpc_server"`
 		URL            string `env:"NATS_URL"        envDefault:"nats://guest:guest@localhost:4222/"`
 	}
