@@ -16,13 +16,13 @@ const (
 
 // Task -.
 type Task struct {
-	ID          string     `json:"id"          example:"550e8400-e29b-41d4-a716-446655440000"`
-	UserID      string     `json:"user_id"     example:"550e8400-e29b-41d4-a716-446655440000"`
-	Title       string     `json:"title"       example:"My task"`
-	Description string     `json:"description" example:"Task description"`
-	Status      TaskStatus `json:"status"      example:"todo"`
-	CreatedAt   time.Time  `json:"created_at"  example:"2026-01-01T00:00:00Z"`
-	UpdatedAt   time.Time  `json:"updated_at"  example:"2026-01-01T00:00:00Z"`
+	ID          string     `example:"550e8400-e29b-41d4-a716-446655440000" json:"id"`
+	UserID      string     `example:"550e8400-e29b-41d4-a716-446655440000" json:"user_id"`
+	Title       string     `example:"My task"                              json:"title"`
+	Description string     `example:"Task description"                     json:"description"`
+	Status      TaskStatus `example:"todo"                                 json:"status"`
+	CreatedAt   time.Time  `example:"2026-01-01T00:00:00Z"                 json:"created_at"`
+	UpdatedAt   time.Time  `example:"2026-01-01T00:00:00Z"                 json:"updated_at"`
 } // @name entity.Task
 
 // Valid reports whether s is a known task status.

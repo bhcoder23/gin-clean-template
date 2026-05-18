@@ -4,17 +4,17 @@ import "github.com/bhcoder23/gin-clean-template/internal/entity"
 
 // CreateTask -.
 type CreateTask struct {
-	Title       string `json:"title"       validate:"required,max=255" example:"My task"`
-	Description string `json:"description" validate:"max=1000"         example:"Task description"`
+	Title       string `example:"My task"          json:"title"       validate:"required,max=255"`
+	Description string `example:"Task description" json:"description" validate:"max=1000"`
 } // @name v1.CreateTask
 
 // UpdateTask -.
 type UpdateTask struct {
-	Title       string `json:"title"       validate:"required,max=255" example:"Updated task"`
-	Description string `json:"description" validate:"max=1000"         example:"Updated description"`
+	Title       string `example:"Updated task"        json:"title"       validate:"required,max=255"`
+	Description string `example:"Updated description" json:"description" validate:"max=1000"`
 } // @name v1.UpdateTask
 
 // TransitionTask -.
 type TransitionTask struct {
-	Status entity.TaskStatus `json:"status" validate:"required,oneof=todo in_progress done" example:"in_progress"`
+	Status entity.TaskStatus `example:"in_progress" json:"status" validate:"required,oneof=todo in_progress done"`
 } // @name v1.TransitionTask

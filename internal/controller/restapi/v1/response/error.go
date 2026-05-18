@@ -2,5 +2,5 @@ package response
 
 // Error -.
 type Error struct {
-	Error string `json:"error" example:"message"`
+	Error string `example:"message" json:"error"`
 } // @name v1.Error
