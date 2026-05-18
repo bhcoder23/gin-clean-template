@@ -122,6 +122,7 @@ type ListTasksRequest struct {
 	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
 	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
 	Offset        int32                  `protobuf:"varint,3,opt,name=offset,proto3" json:"offset,omitempty"`
+	Query         string                 `protobuf:"bytes,4,opt,name=query,proto3" json:"query,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -175,6 +176,13 @@ func (x *ListTasksRequest) GetOffset() int32 {
 		return x.Offset
 	}
 	return 0
+}
+
+func (x *ListTasksRequest) GetQuery() string {
+	if x != nil {
+		return x.Query
+	}
+	return ""
 }
 
 type UpdateTaskRequest struct {
@@ -522,11 +530,12 @@ const file_docs_proto_v1_task_proto_rawDesc = "" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\" \n" +
 	"\x0eGetTaskRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"X\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"n\n" +
 	"\x10ListTasksRequest\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\tR\x06status\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x16\n" +
-	"\x06offset\x18\x03 \x01(\x05R\x06offset\"[\n" +
+	"\x06offset\x18\x03 \x01(\x05R\x06offset\x12\x14\n" +
+	"\x05query\x18\x04 \x01(\tR\x05query\"[\n" +
 	"\x11UpdateTaskRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12 \n" +

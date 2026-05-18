@@ -361,6 +361,10 @@ paths:
         in: query
         name: status
         type: string
+      - description: Search in task title
+        in: query
+        name: q
+        type: string
       - default: 10
         description: Limit
         in: query
@@ -378,6 +382,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/v1.TaskList'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/v1.Error'
         "401":
           description: Unauthorized
           schema:

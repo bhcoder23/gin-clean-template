@@ -51,6 +51,13 @@ func (r *V1) createTask(ctx *gin.Context) {
 	task, err := r.tk.Create(ctx.Request.Context(), userID, body.Title, body.Description)
 	if err != nil {
 		r.l.Error(err, "restapi - v1 - createTask")
+
+		if errors.Is(err, entity.ErrTaskTitleRequired) {
+			errorResponse(ctx, http.StatusBadRequest, "task title is required")
+
+			return
+		}
+
 		errorResponse(ctx, http.StatusInternalServerError, "internal server error")
 
 		return
@@ -65,9 +72,11 @@ func (r *V1) createTask(ctx *gin.Context) {
 // @Tags        tasks
 // @Produce     json
 // @Param       status query    string false "Filter by status" Enums(todo, in_progress, done)
+// @Param       q      query    string false "Search in task title"
 // @Param       limit  query    int    false "Limit"  default(10)
 // @Param       offset query    int    false "Offset" default(0)
 // @Success     200    {object} response.TaskList
+// @Failure     400    {object} response.Error
 // @Failure     401    {object} response.Error
 // @Failure     500    {object} response.Error
 // @Security    BearerAuth
@@ -107,7 +116,7 @@ func (r *V1) listTasks(ctx *gin.Context) {
 		return
 	}
 
-	tasks, total, err := r.tk.List(ctx.Request.Context(), userID, status, limit, offset)
+	tasks, total, err := r.tk.List(ctx.Request.Context(), userID, status, ctx.Query("q"), limit, offset)
 	if err != nil {
 		r.l.Error(err, "restapi - v1 - listTasks")
 		errorResponse(ctx, http.StatusInternalServerError, "internal server error")
@@ -208,6 +217,18 @@ func (r *V1) updateTask(ctx *gin.Context) {
 			return
 		}
 
+		if errors.Is(err, entity.ErrTaskTitleRequired) {
+			errorResponse(ctx, http.StatusBadRequest, "task title is required")
+
+			return
+		}
+
+		if errors.Is(err, entity.ErrTaskCompleted) {
+			errorResponse(ctx, http.StatusBadRequest, "completed task cannot be modified")
+
+			return
+		}
+
 		errorResponse(ctx, http.StatusInternalServerError, "internal server error")
 
 		return
@@ -304,6 +325,12 @@ func (r *V1) deleteTask(ctx *gin.Context) {
 
 		if errors.Is(err, entity.ErrTaskNotFound) {
 			errorResponse(ctx, http.StatusNotFound, "task not found")
+
+			return
+		}
+
+		if errors.Is(err, entity.ErrTaskCompleted) {
+			errorResponse(ctx, http.StatusBadRequest, "completed task cannot be modified")
 
 			return
 		}

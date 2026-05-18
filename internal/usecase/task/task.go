@@ -3,6 +3,7 @@ package task
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/bhcoder23/gin-clean-template/internal/entity"
@@ -27,6 +28,12 @@ func New(r repo.TaskRepo, notificationRepo repo.NotificationRepo) *UseCase {
 // Create -.
 func (uc *UseCase) Create(ctx context.Context, userID, title, description string) (entity.Task, error) {
 	now := time.Now().UTC()
+	title = strings.TrimSpace(title)
+	description = strings.TrimSpace(description)
+
+	if title == "" {
+		return entity.Task{}, entity.ErrTaskTitleRequired
+	}
 
 	task := entity.Task{
 		ID:          uuid.New().String(),
@@ -68,7 +75,7 @@ func (uc *UseCase) Get(ctx context.Context, userID, taskID string) (entity.Task,
 }
 
 // List -.
-func (uc *UseCase) List(ctx context.Context, userID string, status *entity.TaskStatus, limit, offset int) ([]entity.Task, int, error) {
+func (uc *UseCase) List(ctx context.Context, userID string, status *entity.TaskStatus, query string, limit, offset int) ([]entity.Task, int, error) {
 	if limit <= 0 {
 		limit = 10
 	}
@@ -79,6 +86,7 @@ func (uc *UseCase) List(ctx context.Context, userID string, status *entity.TaskS
 
 	tasks, total, err := uc.repo.List(ctx, userID, repo.TaskFilter{
 		Status: status,
+		Query:  strings.TrimSpace(query),
 		Limit:  uint64(limit),
 		Offset: uint64(offset),
 	})
@@ -92,10 +100,20 @@ func (uc *UseCase) List(ctx context.Context, userID string, status *entity.TaskS
 // Update -.
 func (uc *UseCase) Update(ctx context.Context, userID, taskID, title, description string) (entity.Task, error) {
 	now := time.Now().UTC()
+	title = strings.TrimSpace(title)
+	description = strings.TrimSpace(description)
+
+	if title == "" {
+		return entity.Task{}, entity.ErrTaskTitleRequired
+	}
 
 	task, err := uc.repo.GetByID(ctx, userID, taskID)
 	if err != nil {
 		return entity.Task{}, fmt.Errorf("TaskUseCase - Update - uc.repo.GetByID: %w", err)
+	}
+
+	if task.Status == entity.TaskStatusDone {
+		return entity.Task{}, entity.ErrTaskCompleted
 	}
 
 	task.Title = title
@@ -147,7 +165,16 @@ func (uc *UseCase) Transition(ctx context.Context, userID, taskID string, newSta
 
 // Delete -.
 func (uc *UseCase) Delete(ctx context.Context, userID, taskID string) error {
-	err := uc.repo.Delete(ctx, userID, taskID)
+	task, err := uc.repo.GetByID(ctx, userID, taskID)
+	if err != nil {
+		return fmt.Errorf("TaskUseCase - Delete - uc.repo.GetByID: %w", err)
+	}
+
+	if task.Status == entity.TaskStatusDone {
+		return entity.ErrTaskCompleted
+	}
+
+	err = uc.repo.Delete(ctx, userID, taskID)
 	if err != nil {
 		return fmt.Errorf("TaskUseCase - Delete - uc.repo.Delete: %w", err)
 	}

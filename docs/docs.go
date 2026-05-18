@@ -264,6 +264,12 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "string",
+                        "description": "Search in task title",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "default": 10,
                         "description": "Limit",
@@ -283,6 +289,12 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/v1.TaskList"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/v1.Error"
                         }
                     },
                     "401": {

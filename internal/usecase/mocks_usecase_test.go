@@ -210,9 +210,9 @@ func (mr *MockTaskMockRecorder) Get(ctx, userID, taskID any) *gomock.Call {
 }
 
 // List mocks base method.
-func (m *MockTask) List(ctx context.Context, userID string, status *entity.TaskStatus, limit, offset int) ([]entity.Task, int, error) {
+func (m *MockTask) List(ctx context.Context, userID string, status *entity.TaskStatus, query string, limit, offset int) ([]entity.Task, int, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", ctx, userID, status, limit, offset)
+	ret := m.ctrl.Call(m, "List", ctx, userID, status, query, limit, offset)
 	ret0, _ := ret[0].([]entity.Task)
 	ret1, _ := ret[1].(int)
 	ret2, _ := ret[2].(error)
@@ -220,9 +220,9 @@ func (m *MockTask) List(ctx context.Context, userID string, status *entity.TaskS
 }
 
 // List indicates an expected call of List.
-func (mr *MockTaskMockRecorder) List(ctx, userID, status, limit, offset any) *gomock.Call {
+func (mr *MockTaskMockRecorder) List(ctx, userID, status, query, limit, offset any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockTask)(nil).List), ctx, userID, status, limit, offset)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockTask)(nil).List), ctx, userID, status, query, limit, offset)
 }
 
 // Transition mocks base method.

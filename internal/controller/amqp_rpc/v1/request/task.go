@@ -14,6 +14,7 @@ type GetTask struct {
 // ListTasks -.
 type ListTasks struct {
 	Status string `json:"status" validate:"omitempty,oneof=todo in_progress done"`
+	Query  string `json:"query"  validate:"max=255"`
 	Limit  int    `json:"limit"`
 	Offset int    `json:"offset"`
 }

@@ -44,6 +44,37 @@ func TestTaskCreate(t *testing.T) {
 		assert.Equal(t, "My Task", t2.Title)
 		assert.Equal(t, entity.TaskStatusTodo, t2.Status)
 	})
+
+	t.Run("create trims fields", func(t *testing.T) {
+		t.Parallel()
+
+		uc, mockRepo, notificationRepo := newTaskUseCase(t)
+		mockRepo.EXPECT().Store(context.Background(), gomock.Any()).DoAndReturn(func(_ context.Context, task *entity.Task) error {
+			assert.Equal(t, "My Task", task.Title)
+			assert.Equal(t, "Task description", task.Description)
+
+			return nil
+		})
+		notificationRepo.EXPECT().Store(context.Background(), gomock.Any()).Return(nil)
+
+		created, err := uc.Create(context.Background(), "user-id-123", "  My Task  ", "  Task description  ")
+
+		require.NoError(t, err)
+		assert.Equal(t, "My Task", created.Title)
+		assert.Equal(t, "Task description", created.Description)
+	})
+
+	t.Run("create rejects blank title after trim", func(t *testing.T) {
+		t.Parallel()
+
+		uc, mockRepo, notificationRepo := newTaskUseCase(t)
+		mockRepo.EXPECT().Store(gomock.Any(), gomock.Any()).Times(0)
+		notificationRepo.EXPECT().Store(gomock.Any(), gomock.Any()).Times(0)
+
+		_, err := uc.Create(context.Background(), "user-id-123", "   ", "desc")
+
+		require.ErrorIs(t, err, entity.ErrTaskTitleRequired)
+	})
 }
 
 func TestTaskGet(t *testing.T) {
@@ -92,7 +123,7 @@ func TestTaskList(t *testing.T) {
 		uc, mockRepo, _ := newTaskUseCase(t)
 		mockRepo.EXPECT().List(context.Background(), "user-id-123", gomock.Any()).Return([]entity.Task{task1, task2}, 2, nil)
 
-		tasks, total, err := uc.List(context.Background(), "user-id-123", nil, 10, 0)
+		tasks, total, err := uc.List(context.Background(), "user-id-123", nil, "", 10, 0)
 
 		require.NoError(t, err)
 		assert.Equal(t, 2, total)
@@ -109,11 +140,29 @@ func TestTaskList(t *testing.T) {
 			Offset: uint64(0),
 		}).Return([]entity.Task{task1, task2}, 2, nil)
 
-		tasks, total, err := uc.List(context.Background(), "user-id-123", nil, 0, -1)
+		tasks, total, err := uc.List(context.Background(), "user-id-123", nil, "", 0, -1)
 
 		require.NoError(t, err)
 		assert.Equal(t, 2, total)
 		assert.Len(t, tasks, 2)
+	})
+
+	t.Run("list trims query", func(t *testing.T) {
+		t.Parallel()
+
+		uc, mockRepo, _ := newTaskUseCase(t)
+		mockRepo.EXPECT().List(context.Background(), "user-id-123", repo.TaskFilter{
+			Status: nil,
+			Query:  "urgent",
+			Limit:  uint64(10),
+			Offset: uint64(0),
+		}).Return([]entity.Task{task1}, 1, nil)
+
+		tasks, total, err := uc.List(context.Background(), "user-id-123", nil, "  urgent  ", 10, 0)
+
+		require.NoError(t, err)
+		assert.Equal(t, 1, total)
+		assert.Len(t, tasks, 1)
 	})
 }
 
@@ -139,6 +188,54 @@ func TestTaskUpdate(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, "New Title", updated.Title)
+	})
+
+	t.Run("update trims fields", func(t *testing.T) {
+		t.Parallel()
+
+		uc, mockRepo, _ := newTaskUseCase(t)
+
+		existingTask := entity.Task{
+			ID:          "task-id-123",
+			UserID:      "user-id-123",
+			Title:       "Old Title",
+			Description: "Old description",
+			Status:      entity.TaskStatusTodo,
+		}
+
+		mockRepo.EXPECT().GetByID(context.Background(), "user-id-123", "task-id-123").Return(existingTask, nil)
+		mockRepo.EXPECT().Update(context.Background(), gomock.Any()).DoAndReturn(func(_ context.Context, task *entity.Task) error {
+			assert.Equal(t, "New Title", task.Title)
+			assert.Equal(t, "New description", task.Description)
+
+			return nil
+		})
+
+		updated, err := uc.Update(context.Background(), "user-id-123", "task-id-123", "  New Title  ", "  New description  ")
+
+		require.NoError(t, err)
+		assert.Equal(t, "New Title", updated.Title)
+		assert.Equal(t, "New description", updated.Description)
+	})
+
+	t.Run("update rejects done task", func(t *testing.T) {
+		t.Parallel()
+
+		uc, mockRepo, _ := newTaskUseCase(t)
+
+		existingTask := entity.Task{
+			ID:     "task-id-123",
+			UserID: "user-id-123",
+			Title:  "Done Task",
+			Status: entity.TaskStatusDone,
+		}
+
+		mockRepo.EXPECT().GetByID(context.Background(), "user-id-123", "task-id-123").Return(existingTask, nil)
+		mockRepo.EXPECT().Update(gomock.Any(), gomock.Any()).Times(0)
+
+		_, err := uc.Update(context.Background(), "user-id-123", "task-id-123", "New Title", "desc")
+
+		require.ErrorIs(t, err, entity.ErrTaskCompleted)
 	})
 }
 
@@ -185,6 +282,26 @@ func TestTaskTransition(t *testing.T) {
 
 		require.ErrorIs(t, err, entity.ErrInvalidTransition)
 	})
+
+	t.Run("transition done task cannot move again", func(t *testing.T) {
+		t.Parallel()
+
+		uc, mockRepo, notificationRepo := newTaskUseCase(t)
+
+		doneTask := entity.Task{
+			ID:     "task-id-456",
+			UserID: "user-id-123",
+			Title:  "Done Task",
+			Status: entity.TaskStatusDone,
+		}
+
+		mockRepo.EXPECT().GetByID(context.Background(), "user-id-123", "task-id-456").Return(doneTask, nil)
+		notificationRepo.EXPECT().Store(gomock.Any(), gomock.Any()).Times(0)
+
+		_, err := uc.Transition(context.Background(), "user-id-123", "task-id-456", entity.TaskStatusTodo)
+
+		require.ErrorIs(t, err, entity.ErrInvalidTransition)
+	})
 }
 
 func TestTaskDelete(t *testing.T) {
@@ -194,6 +311,14 @@ func TestTaskDelete(t *testing.T) {
 		t.Parallel()
 
 		uc, mockRepo, _ := newTaskUseCase(t)
+		activeTask := entity.Task{
+			ID:     "task-id-123",
+			UserID: "user-id-123",
+			Title:  "Task",
+			Status: entity.TaskStatusTodo,
+		}
+
+		mockRepo.EXPECT().GetByID(context.Background(), "user-id-123", "task-id-123").Return(activeTask, nil)
 		mockRepo.EXPECT().Delete(context.Background(), "user-id-123", "task-id-123").Return(nil)
 
 		err := uc.Delete(context.Background(), "user-id-123", "task-id-123")
@@ -205,11 +330,31 @@ func TestTaskDelete(t *testing.T) {
 		t.Parallel()
 
 		uc, mockRepo, _ := newTaskUseCase(t)
-		mockRepo.EXPECT().Delete(context.Background(), "user-id-123", "missing-id").Return(entity.ErrTaskNotFound)
+		mockRepo.EXPECT().GetByID(context.Background(), "user-id-123", "missing-id").Return(entity.Task{}, entity.ErrTaskNotFound)
 
 		err := uc.Delete(context.Background(), "user-id-123", "missing-id")
 
 		require.ErrorIs(t, err, entity.ErrTaskNotFound)
+	})
+
+	t.Run("delete rejects done task", func(t *testing.T) {
+		t.Parallel()
+
+		uc, mockRepo, _ := newTaskUseCase(t)
+
+		doneTask := entity.Task{
+			ID:     "task-id-123",
+			UserID: "user-id-123",
+			Title:  "Done Task",
+			Status: entity.TaskStatusDone,
+		}
+
+		mockRepo.EXPECT().GetByID(context.Background(), "user-id-123", "task-id-123").Return(doneTask, nil)
+		mockRepo.EXPECT().Delete(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+		err := uc.Delete(context.Background(), "user-id-123", "task-id-123")
+
+		require.ErrorIs(t, err, entity.ErrTaskCompleted)
 	})
 }
 
@@ -298,7 +443,14 @@ func TestTaskDelete_GenericError(t *testing.T) {
 	t.Parallel()
 
 	uc, mockRepo, _ := newTaskUseCase(t)
+	activeTask := entity.Task{
+		ID:     "task-id-123",
+		UserID: "user-id-123",
+		Title:  "Task",
+		Status: entity.TaskStatusTodo,
+	}
 
+	mockRepo.EXPECT().GetByID(context.Background(), "user-id-123", "task-id-123").Return(activeTask, nil)
 	mockRepo.EXPECT().Delete(context.Background(), "user-id-123", "task-id-123").Return(errRepoGeneric)
 
 	err := uc.Delete(context.Background(), "user-id-123", "task-id-123")
@@ -316,7 +468,7 @@ func TestTaskList_RepoError(t *testing.T) {
 		List(context.Background(), "user-id-123", repo.TaskFilter{Limit: uint64(10), Offset: uint64(0)}).
 		Return(nil, 0, errRepoGeneric)
 
-	_, _, err := uc.List(context.Background(), "user-id-123", nil, 10, 0)
+	_, _, err := uc.List(context.Background(), "user-id-123", nil, "", 10, 0)
 
 	require.Error(t, err)
 	require.ErrorIs(t, err, errRepoGeneric)

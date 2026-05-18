@@ -29,7 +29,7 @@ func (taskUseCaseStub) Get(_ context.Context, _, _ string) (entity.Task, error) 
 	return entity.Task{}, nil
 }
 
-func (taskUseCaseStub) List(_ context.Context, _ string, _ *entity.TaskStatus, _, _ int) ([]entity.Task, int, error) {
+func (taskUseCaseStub) List(_ context.Context, _ string, _ *entity.TaskStatus, _ string, _, _ int) ([]entity.Task, int, error) {
 	return []entity.Task{}, 0, nil
 }
 
@@ -55,7 +55,7 @@ func (taskUseCaseWithListError) Get(_ context.Context, _, _ string) (entity.Task
 	return entity.Task{}, nil
 }
 
-func (taskUseCaseWithListError) List(_ context.Context, _ string, _ *entity.TaskStatus, _, _ int) ([]entity.Task, int, error) {
+func (taskUseCaseWithListError) List(_ context.Context, _ string, _ *entity.TaskStatus, _ string, _, _ int) ([]entity.Task, int, error) {
 	return nil, 0, errListShouldNotRun
 }
 

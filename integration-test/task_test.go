@@ -78,6 +78,19 @@ func TestHTTPTaskCreateV1(t *testing.T) {
 	}
 }
 
+func TestHTTPTaskCreateTrimsFieldsV1(t *testing.T) {
+	token := registerAndLogin(t)
+	created := httpCreateTask(t, token, "  integration task  ", "  test description  ")
+
+	if created.Title != "integration task" {
+		t.Errorf("expected trimmed title, got %q", created.Title)
+	}
+
+	if created.Description != "test description" {
+		t.Errorf("expected trimmed description, got %q", created.Description)
+	}
+}
+
 // HTTP: get task by ID.
 func TestHTTPTaskGetV1(t *testing.T) {
 	token := registerAndLogin(t)
@@ -135,6 +148,45 @@ func TestHTTPTaskListV1(t *testing.T) {
 	}
 }
 
+func TestHTTPTaskListQueryFilterV1(t *testing.T) {
+	token := registerAndLogin(t)
+	httpCreateTask(t, token, "urgent migration", "test description")
+	httpCreateTask(t, token, "routine cleanup", "test description")
+
+	ctx, cancel := context.WithTimeout(t.Context(), requestTimeout)
+	defer cancel()
+
+	resp, err := doAuthenticatedRequest(ctx, http.MethodGet, basePathV1+"/tasks?q=urgent", http.NoBody, token)
+	if err != nil {
+		t.Fatalf("List filtered tasks: %v", err)
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	type listResponse struct {
+		Tasks []taskResponse `json:"tasks"`
+		Total int            `json:"total"`
+	}
+
+	listed := parseJSON[listResponse](t, resp)
+
+	if listed.Total != 1 {
+		t.Fatalf("expected total 1, got %d", listed.Total)
+	}
+
+	if len(listed.Tasks) != 1 {
+		t.Fatalf("expected 1 task, got %d", len(listed.Tasks))
+	}
+
+	if listed.Tasks[0].Title != "urgent migration" {
+		t.Errorf("expected filtered task title %q, got %q", "urgent migration", listed.Tasks[0].Title)
+	}
+}
+
 // HTTP: update task.
 func TestHTTPTaskUpdateV1(t *testing.T) {
 	token := registerAndLogin(t)
@@ -163,6 +215,39 @@ func TestHTTPTaskUpdateV1(t *testing.T) {
 	}
 }
 
+func TestHTTPTaskUpdateDoneRejectedV1(t *testing.T) {
+	token := registerAndLogin(t)
+	created := httpCreateTask(t, token, "done task", "test description")
+
+	resp, err := httpTransitionTask(t, token, created.ID, statusInProgress)
+	if err != nil {
+		t.Fatalf("Transition to in_progress: %v", err)
+	}
+	resp.Body.Close()
+
+	resp, err = httpTransitionTask(t, token, created.ID, "done")
+	if err != nil {
+		t.Fatalf("Transition to done: %v", err)
+	}
+	resp.Body.Close()
+
+	updateBody := `{"title":"updated title","description":"updated description"}`
+
+	ctx, cancel := context.WithTimeout(t.Context(), requestTimeout)
+	defer cancel()
+
+	resp, err = doAuthenticatedRequest(ctx, http.MethodPut, basePathV1+"/tasks/"+created.ID, bytes.NewBufferString(updateBody), token)
+	if err != nil {
+		t.Fatalf("Update done task: %v", err)
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", resp.StatusCode)
+	}
+}
+
 // HTTP: delete task.
 func TestHTTPTaskDeleteV1(t *testing.T) {
 	token := registerAndLogin(t)
@@ -180,6 +265,37 @@ func TestHTTPTaskDeleteV1(t *testing.T) {
 
 	if resp.StatusCode != http.StatusNoContent {
 		t.Errorf("expected 204, got %d", resp.StatusCode)
+	}
+}
+
+func TestHTTPTaskDeleteDoneRejectedV1(t *testing.T) {
+	token := registerAndLogin(t)
+	created := httpCreateTask(t, token, "done task", "test description")
+
+	resp, err := httpTransitionTask(t, token, created.ID, statusInProgress)
+	if err != nil {
+		t.Fatalf("Transition to in_progress: %v", err)
+	}
+	resp.Body.Close()
+
+	resp, err = httpTransitionTask(t, token, created.ID, "done")
+	if err != nil {
+		t.Fatalf("Transition to done: %v", err)
+	}
+	resp.Body.Close()
+
+	ctx, cancel := context.WithTimeout(t.Context(), requestTimeout)
+	defer cancel()
+
+	resp, err = doAuthenticatedRequest(ctx, http.MethodDelete, basePathV1+"/tasks/"+created.ID, http.NoBody, token)
+	if err != nil {
+		t.Fatalf("Delete done task: %v", err)
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", resp.StatusCode)
 	}
 }
 

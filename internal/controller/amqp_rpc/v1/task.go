@@ -95,7 +95,7 @@ func (r *V1) listTasks() server.CallHandler {
 			status = &s
 		}
 
-		tasks, total, err := r.tk.List(context.Background(), userID, status, req.Limit, req.Offset)
+		tasks, total, err := r.tk.List(context.Background(), userID, status, req.Query, req.Limit, req.Offset)
 		if err != nil {
 			r.l.Error(err, "amqp_rpc - V1 - listTasks")
 

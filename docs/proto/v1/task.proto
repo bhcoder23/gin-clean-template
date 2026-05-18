@@ -26,6 +26,7 @@ message ListTasksRequest {
   string status = 1;
   int32 limit = 2;
   int32 offset = 3;
+  string query = 4;
 }
 
 message UpdateTaskRequest {

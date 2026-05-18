@@ -23,6 +23,10 @@ func (c *TaskController) CreateTask(ctx context.Context, req *v1.CreateTaskReque
 	if err != nil {
 		c.l.Error(err, "grpc - v1 - CreateTask")
 
+		if errors.Is(err, entity.ErrTaskTitleRequired) {
+			return nil, status.Error(codes.InvalidArgument, "task title is required")
+		}
+
 		return nil, status.Error(codes.Internal, "internal server error")
 	}
 
@@ -68,7 +72,7 @@ func (c *TaskController) ListTasks(ctx context.Context, req *v1.ListTasksRequest
 		statusFilter = &s
 	}
 
-	tasks, total, err := c.tk.List(ctx, userID, statusFilter, int(req.GetLimit()), int(req.GetOffset()))
+	tasks, total, err := c.tk.List(ctx, userID, statusFilter, req.GetQuery(), int(req.GetLimit()), int(req.GetOffset()))
 	if err != nil {
 		c.l.Error(err, "grpc - v1 - ListTasks")
 
@@ -91,6 +95,14 @@ func (c *TaskController) UpdateTask(ctx context.Context, req *v1.UpdateTaskReque
 
 		if errors.Is(err, entity.ErrTaskNotFound) {
 			return nil, status.Error(codes.NotFound, "task not found")
+		}
+
+		if errors.Is(err, entity.ErrTaskTitleRequired) {
+			return nil, status.Error(codes.InvalidArgument, "task title is required")
+		}
+
+		if errors.Is(err, entity.ErrTaskCompleted) {
+			return nil, status.Error(codes.InvalidArgument, "completed task cannot be modified")
 		}
 
 		return nil, status.Error(codes.Internal, "internal server error")
@@ -137,6 +149,10 @@ func (c *TaskController) DeleteTask(ctx context.Context, req *v1.DeleteTaskReque
 
 		if errors.Is(err, entity.ErrTaskNotFound) {
 			return nil, status.Error(codes.NotFound, "task not found")
+		}
+
+		if errors.Is(err, entity.ErrTaskCompleted) {
+			return nil, status.Error(codes.InvalidArgument, "completed task cannot be modified")
 		}
 
 		return nil, status.Error(codes.Internal, "internal server error")

@@ -99,6 +99,10 @@ func (r *TaskRepo) List(ctx context.Context, userID string, filter repo.TaskFilt
 		countBuilder = countBuilder.Where(sq.Eq{"status": *filter.Status})
 	}
 
+	if filter.Query != "" {
+		countBuilder = countBuilder.Where("title ILIKE ?", "%"+filter.Query+"%")
+	}
+
 	countSQL, countArgs, err := countBuilder.ToSql()
 	if err != nil {
 		return nil, 0, fmt.Errorf("TaskRepo - List - countBuilder: %w", err)
@@ -121,6 +125,10 @@ func (r *TaskRepo) List(ctx context.Context, userID string, filter repo.TaskFilt
 
 	if filter.Status != nil {
 		dataBuilder = dataBuilder.Where(sq.Eq{"status": *filter.Status})
+	}
+
+	if filter.Query != "" {
+		dataBuilder = dataBuilder.Where("title ILIKE ?", "%"+filter.Query+"%")
 	}
 
 	dataSQL, dataArgs, err := dataBuilder.ToSql()

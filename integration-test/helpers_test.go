@@ -136,6 +136,7 @@ func sanitizeTestName(t *testing.T) string {
 	name = strings.ReplaceAll(name, "/", "_")
 	name = strings.ReplaceAll(name, " ", "_")
 	name = strings.ToLower(name)
+	name = fmt.Sprintf("%s_%d", name, time.Now().UnixNano())
 
 	return name
 }

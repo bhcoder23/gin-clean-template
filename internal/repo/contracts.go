@@ -37,6 +37,7 @@ type (
 	// TaskFilter -.
 	TaskFilter struct {
 		Status *entity.TaskStatus
+		Query  string
 		Limit  uint64
 		Offset uint64
 	}
