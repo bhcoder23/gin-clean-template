@@ -5,22 +5,22 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bhcoder23/gin-clean-template/internal/entity"
-	"github.com/bhcoder23/gin-clean-template/internal/repo"
+	"github.com/bhcoder23/gin-clean-template/internal/domain"
+	appports "github.com/bhcoder23/gin-clean-template/internal/usecase"
 )
 
 // UseCase -.
 type UseCase struct {
-	repo repo.NotificationRepo
+	repo appports.NotificationStore
 }
 
 // New -.
-func New(r repo.NotificationRepo) *UseCase {
+func New(r appports.NotificationStore) *UseCase {
 	return &UseCase{repo: r}
 }
 
 // List -.
-func (uc *UseCase) List(ctx context.Context, userID string, unreadOnly *bool, limit, offset int) ([]entity.Notification, int, error) {
+func (uc *UseCase) List(ctx context.Context, userID string, unreadOnly *bool, limit, offset int) ([]domain.Notification, int, error) {
 	if limit <= 0 {
 		limit = 10
 	}
@@ -29,7 +29,7 @@ func (uc *UseCase) List(ctx context.Context, userID string, unreadOnly *bool, li
 		offset = 0
 	}
 
-	notifications, total, err := uc.repo.List(ctx, userID, repo.NotificationFilter{
+	notifications, total, err := uc.repo.List(ctx, userID, appports.NotificationFilter{
 		UnreadOnly: unreadOnly,
 		Limit:      uint64(limit),
 		Offset:     uint64(offset),
@@ -42,10 +42,10 @@ func (uc *UseCase) List(ctx context.Context, userID string, unreadOnly *bool, li
 }
 
 // MarkRead -.
-func (uc *UseCase) MarkRead(ctx context.Context, userID, notificationID string) (entity.Notification, error) {
+func (uc *UseCase) MarkRead(ctx context.Context, userID, notificationID string) (domain.Notification, error) {
 	notification, err := uc.repo.GetByID(ctx, userID, notificationID)
 	if err != nil {
-		return entity.Notification{}, fmt.Errorf("NotificationUseCase - MarkRead - uc.repo.GetByID: %w", err)
+		return domain.Notification{}, fmt.Errorf("NotificationUseCase - MarkRead - uc.repo.GetByID: %w", err)
 	}
 
 	if notification.Read {
@@ -57,7 +57,7 @@ func (uc *UseCase) MarkRead(ctx context.Context, userID, notificationID string) 
 	notification.ReadAt = &now
 
 	if err = uc.repo.Update(ctx, &notification); err != nil {
-		return entity.Notification{}, fmt.Errorf("NotificationUseCase - MarkRead - uc.repo.Update: %w", err)
+		return domain.Notification{}, fmt.Errorf("NotificationUseCase - MarkRead - uc.repo.Update: %w", err)
 	}
 
 	return notification, nil

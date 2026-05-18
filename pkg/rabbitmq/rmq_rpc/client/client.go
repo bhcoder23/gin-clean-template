@@ -147,10 +147,10 @@ func (c *Client) RemoteCall(handler string, request, response any) error {
 		}
 
 		return nil
-	case rmqrpc.ErrBadHandler.Error():
-		return rmqrpc.ErrBadHandler
-	case rmqrpc.ErrInternalServer.Error():
-		return rmqrpc.ErrInternalServer
+	}
+
+	if err = rmqrpc.ErrorFromStatus(call.status); err != nil {
+		return err
 	}
 
 	return nil

@@ -162,9 +162,17 @@ func (s *Server) handleMessage(msg *nats.Msg) {
 
 	response, err := callHandler(msg)
 	if err != nil {
-		s.publish(msg, nil, natsrpc.ErrInternalServer.Error())
+		status := natsrpc.ErrInternalServer.Error()
+		if natsrpc.IsKnownStatus(err.Error()) {
+			status = err.Error()
+		}
 
-		s.logger.Error(err, "nats_rpc server - Server - handleMessage - callHandler")
+		s.publish(msg, nil, status)
+		if natsrpc.IsKnownStatus(status) {
+			s.logger.Warn(err, "nats_rpc server - Server - handleMessage - callHandler")
+		} else {
+			s.logger.Error(err, "nats_rpc server - Server - handleMessage - callHandler")
+		}
 
 		return
 	}

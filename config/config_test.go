@@ -19,6 +19,7 @@ func TestNewConfigTransportDefaults(t *testing.T) {
 
 	require.NoError(t, err)
 	require.True(t, cfg.HTTP.Enabled)
+	require.Equal(t, "release", cfg.HTTP.Mode)
 	require.True(t, cfg.GRPC.Enabled)
 	require.True(t, cfg.RMQ.Enabled)
 	require.True(t, cfg.NATS.Enabled)

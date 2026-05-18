@@ -101,10 +101,10 @@ func (c *Client) RemoteCall(handler string, request, response any) error {
 		if err != nil {
 			return fmt.Errorf("nats_rpc client - Client - RemoteCall - json.Unmarshal: %w", err)
 		}
-	case natsrpc.ErrBadHandler.Error():
-		return natsrpc.ErrBadHandler
-	case natsrpc.ErrInternalServer.Error():
-		return natsrpc.ErrInternalServer
+	}
+
+	if err = natsrpc.ErrorFromStatus(message.Header.Get("Status")); err != nil {
+		return err
 	}
 
 	return nil

@@ -15,6 +15,13 @@ func Port(port string) Option {
 	}
 }
 
+// GinMode -.
+func GinMode(mode string) Option {
+	return func(s *Server) {
+		s.mode = mode
+	}
+}
+
 // ReadTimeout -.
 func ReadTimeout(timeout time.Duration) Option {
 	return func(s *Server) {

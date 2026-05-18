@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bhcoder23/gin-clean-template/internal/entity"
-	"github.com/bhcoder23/gin-clean-template/internal/repo"
+	"github.com/bhcoder23/gin-clean-template/internal/domain"
+	appports "github.com/bhcoder23/gin-clean-template/internal/usecase"
 	"github.com/bhcoder23/gin-clean-template/pkg/jwt"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -15,12 +15,12 @@ import (
 
 // UseCase -.
 type UseCase struct {
-	repo repo.UserRepo
+	repo appports.UserStore
 	jwt  *jwt.Manager
 }
 
 // New -.
-func New(r repo.UserRepo, j *jwt.Manager) *UseCase {
+func New(r appports.UserStore, j *jwt.Manager) *UseCase {
 	return &UseCase{
 		repo: r,
 		jwt:  j,
@@ -28,15 +28,15 @@ func New(r repo.UserRepo, j *jwt.Manager) *UseCase {
 }
 
 // Register -.
-func (uc *UseCase) Register(ctx context.Context, username, email, password string) (entity.User, error) {
+func (uc *UseCase) Register(ctx context.Context, username, email, password string) (domain.User, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return entity.User{}, fmt.Errorf("UserUseCase - Register - bcrypt.GenerateFromPassword: %w", err)
+		return domain.User{}, fmt.Errorf("UserUseCase - Register - bcrypt.GenerateFromPassword: %w", err)
 	}
 
 	now := time.Now().UTC()
 
-	user := entity.User{
+	user := domain.User{
 		ID:           uuid.New().String(),
 		Username:     username,
 		Email:        email,
@@ -47,7 +47,7 @@ func (uc *UseCase) Register(ctx context.Context, username, email, password strin
 
 	err = uc.repo.Store(ctx, &user)
 	if err != nil {
-		return entity.User{}, fmt.Errorf("UserUseCase - Register - uc.repo.Store: %w", err)
+		return domain.User{}, fmt.Errorf("UserUseCase - Register - uc.repo.Store: %w", err)
 	}
 
 	return user, nil
@@ -57,8 +57,8 @@ func (uc *UseCase) Register(ctx context.Context, username, email, password strin
 func (uc *UseCase) Login(ctx context.Context, email, password string) (string, error) {
 	user, err := uc.repo.GetByEmail(ctx, email)
 	if err != nil {
-		if errors.Is(err, entity.ErrUserNotFound) {
-			return "", entity.ErrInvalidCredentials
+		if errors.Is(err, domain.ErrUserNotFound) {
+			return "", domain.ErrInvalidCredentials
 		}
 
 		return "", fmt.Errorf("UserUseCase - Login - uc.repo.GetByEmail: %w", err)
@@ -66,7 +66,7 @@ func (uc *UseCase) Login(ctx context.Context, email, password string) (string, e
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
 	if err != nil {
-		return "", entity.ErrInvalidCredentials
+		return "", domain.ErrInvalidCredentials
 	}
 
 	token, err := uc.jwt.GenerateToken(user.ID)
@@ -78,10 +78,10 @@ func (uc *UseCase) Login(ctx context.Context, email, password string) (string, e
 }
 
 // GetUser -.
-func (uc *UseCase) GetUser(ctx context.Context, userID string) (entity.User, error) {
+func (uc *UseCase) GetUser(ctx context.Context, userID string) (domain.User, error) {
 	user, err := uc.repo.GetByID(ctx, userID)
 	if err != nil {
-		return entity.User{}, fmt.Errorf("UserUseCase - GetUser - uc.repo.GetByID: %w", err)
+		return domain.User{}, fmt.Errorf("UserUseCase - GetUser - uc.repo.GetByID: %w", err)
 	}
 
 	return user, nil

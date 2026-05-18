@@ -40,7 +40,7 @@ compose-down: ### Down docker compose
 .PHONY: compose-down
 
 generate: ### regenerate Swagger and protobuf artifacts
-	go tool swag init --parseDependency -g internal/controller/restapi/router.go
+	go tool swag init --parseDependency -g internal/transport/restapi/router.go
 	protoc --go_out=. \
 		--go_opt=paths=source_relative \
 		--go-grpc_out=. \
@@ -49,7 +49,7 @@ generate: ### regenerate Swagger and protobuf artifacts
 .PHONY: generate
 
 swag-v1: ### swag init
-	go tool swag init --parseDependency -g internal/controller/restapi/router.go
+	go tool swag init --parseDependency -g internal/transport/restapi/router.go
 .PHONY: swag-v1
 
 proto-v1: ### generate source files from proto
@@ -111,7 +111,6 @@ integration-test: ### run integration-test
 .PHONY: integration-test
 
 mock: ### run mockgen
-	go tool mockgen -source ./internal/repo/contracts.go -package usecase_test > ./internal/usecase/mocks_repo_test.go
 	go tool mockgen -source ./internal/usecase/contracts.go -package usecase_test > ./internal/usecase/mocks_usecase_test.go
 .PHONY: mock
 

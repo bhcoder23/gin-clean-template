@@ -8,7 +8,9 @@ import (
 	"testing"
 
 	protov1 "github.com/bhcoder23/gin-clean-template/docs/proto/v1"
+	natsrpc "github.com/bhcoder23/gin-clean-template/pkg/nats/nats_rpc"
 	natsClient "github.com/bhcoder23/gin-clean-template/pkg/nats/nats_rpc/client"
+	rmqrpc "github.com/bhcoder23/gin-clean-template/pkg/rabbitmq/rmq_rpc"
 	rmqClient "github.com/bhcoder23/gin-clean-template/pkg/rabbitmq/rmq_rpc/client"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -681,5 +683,77 @@ func TestNATSTaskV1(t *testing.T) {
 
 	if listResp.Total < 1 {
 		t.Errorf("Expected total >= 1, got %d", listResp.Total)
+	}
+}
+
+func TestRMQTaskKnownErrorsV1(t *testing.T) {
+	token := registerAndLoginRMQ(t)
+
+	client, err := rmqClient.New(rmqURL, rpcServerExchange, rpcClientExchange)
+	if err != nil {
+		t.Fatalf("rmqClient.New: %v", err)
+	}
+
+	defer func() {
+		if serr := client.Shutdown(); serr != nil {
+			t.Fatalf("client.Shutdown: %v", serr)
+		}
+	}()
+
+	var listResp struct {
+		Tasks []taskResponse `json:"tasks"`
+		Total int            `json:"total"`
+	}
+
+	err = client.RemoteCall("v1.task.list", authenticatedPayload("broken-token", map[string]any{
+		"limit":  10,
+		"offset": 0,
+	}), &listResp)
+	if err != rmqrpc.ErrUnauthorized {
+		t.Fatalf("expected ErrUnauthorized, got %v", err)
+	}
+
+	var getResp taskResponse
+	err = client.RemoteCall("v1.task.get", authenticatedPayload(token, map[string]string{
+		"id": "00000000-0000-0000-0000-000000000000",
+	}), &getResp)
+	if err != rmqrpc.ErrTaskNotFound {
+		t.Fatalf("expected ErrTaskNotFound, got %v", err)
+	}
+}
+
+func TestNATSTaskKnownErrorsV1(t *testing.T) {
+	token := registerAndLoginNATS(t)
+
+	client, err := natsClient.New(natsURL, rpcServerExchange)
+	if err != nil {
+		t.Fatalf("natsClient.New: %v", err)
+	}
+
+	defer func() {
+		if serr := client.Shutdown(); serr != nil {
+			t.Fatalf("client.Shutdown: %v", serr)
+		}
+	}()
+
+	var listResp struct {
+		Tasks []taskResponse `json:"tasks"`
+		Total int            `json:"total"`
+	}
+
+	err = client.RemoteCall("v1.task.list", authenticatedPayload("broken-token", map[string]any{
+		"limit":  10,
+		"offset": 0,
+	}), &listResp)
+	if err != natsrpc.ErrUnauthorized {
+		t.Fatalf("expected ErrUnauthorized, got %v", err)
+	}
+
+	var getResp taskResponse
+	err = client.RemoteCall("v1.task.get", authenticatedPayload(token, map[string]string{
+		"id": "00000000-0000-0000-0000-000000000000",
+	}), &getResp)
+	if err != natsrpc.ErrTaskNotFound {
+		t.Fatalf("expected ErrTaskNotFound, got %v", err)
 	}
 }

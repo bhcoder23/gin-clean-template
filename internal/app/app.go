@@ -8,12 +8,12 @@ import (
 	"syscall"
 
 	"github.com/bhcoder23/gin-clean-template/config"
-	amqprpc "github.com/bhcoder23/gin-clean-template/internal/controller/amqp_rpc"
-	"github.com/bhcoder23/gin-clean-template/internal/controller/grpc"
-	grpcmw "github.com/bhcoder23/gin-clean-template/internal/controller/grpc/middleware"
-	natsrpc "github.com/bhcoder23/gin-clean-template/internal/controller/nats_rpc"
-	"github.com/bhcoder23/gin-clean-template/internal/controller/restapi"
-	"github.com/bhcoder23/gin-clean-template/internal/repo/persistent"
+	"github.com/bhcoder23/gin-clean-template/internal/infra/persistence"
+	amqprpc "github.com/bhcoder23/gin-clean-template/internal/transport/amqp_rpc"
+	"github.com/bhcoder23/gin-clean-template/internal/transport/grpc"
+	grpcmw "github.com/bhcoder23/gin-clean-template/internal/transport/grpc/middleware"
+	natsrpc "github.com/bhcoder23/gin-clean-template/internal/transport/nats_rpc"
+	"github.com/bhcoder23/gin-clean-template/internal/transport/restapi"
 	"github.com/bhcoder23/gin-clean-template/internal/usecase/notification"
 	"github.com/bhcoder23/gin-clean-template/internal/usecase/task"
 	"github.com/bhcoder23/gin-clean-template/internal/usecase/user"
@@ -61,9 +61,9 @@ func (t transportSet) any() bool {
 }
 
 func initUseCases(pg *postgres.Postgres, jwtManager *jwt.Manager) useCases {
-	userRepo := persistent.NewUserRepo(pg)
-	taskRepo := persistent.NewTaskRepo(pg)
-	notificationRepo := persistent.NewNotificationRepo(pg)
+	userRepo := persistence.NewUserRepo(pg)
+	taskRepo := persistence.NewTaskRepo(pg)
+	notificationRepo := persistence.NewNotificationRepo(pg)
 
 	return useCases{
 		user:         user.New(userRepo, jwtManager),
@@ -113,7 +113,7 @@ func initServers(cfg *config.Config, uc useCases, jwtManager *jwt.Manager, l log
 	}
 
 	if enabled.http {
-		httpServer := httpserver.New(l, httpserver.Port(cfg.HTTP.Port))
+		httpServer := httpserver.New(l, httpserver.GinMode(cfg.HTTP.Mode), httpserver.Port(cfg.HTTP.Port))
 		restapi.NewRouter(httpServer.App, cfg, uc.notification, uc.user, uc.task, jwtManager, l)
 
 		s.http = httpServer

@@ -91,7 +91,7 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/entity.User"
+                            "$ref": "#/definitions/domain.User"
                         }
                     },
                     "400": {
@@ -152,7 +152,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/entity.NotificationList"
+                            "$ref": "#/definitions/domain.NotificationList"
                         }
                     },
                     "400": {
@@ -205,7 +205,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/entity.Notification"
+                            "$ref": "#/definitions/domain.Notification"
                         }
                     },
                     "401": {
@@ -338,7 +338,7 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/entity.Task"
+                            "$ref": "#/definitions/domain.Task"
                         }
                     },
                     "400": {
@@ -391,7 +391,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/entity.Task"
+                            "$ref": "#/definitions/domain.Task"
                         }
                     },
                     "401": {
@@ -454,7 +454,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/entity.Task"
+                            "$ref": "#/definitions/domain.Task"
                         }
                     },
                     "400": {
@@ -570,7 +570,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/entity.Task"
+                            "$ref": "#/definitions/domain.Task"
                         }
                     },
                     "400": {
@@ -620,7 +620,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/entity.User"
+                            "$ref": "#/definitions/domain.User"
                         }
                     },
                     "401": {
@@ -651,7 +651,7 @@
         }
     },
     "definitions": {
-        "entity.Notification": {
+        "domain.Notification": {
             "type": "object",
             "properties": {
                 "body": {
@@ -685,7 +685,7 @@
                 "type": {
                     "allOf": [
                         {
-                            "$ref": "#/definitions/entity.NotificationType"
+                            "$ref": "#/definitions/domain.NotificationType"
                         }
                     ],
                     "example": "task_created"
@@ -696,13 +696,13 @@
                 }
             }
         },
-        "entity.NotificationList": {
+        "domain.NotificationList": {
             "type": "object",
             "properties": {
                 "notifications": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/entity.Notification"
+                        "$ref": "#/definitions/domain.Notification"
                     }
                 },
                 "total": {
@@ -710,7 +710,7 @@
                 }
             }
         },
-        "entity.NotificationType": {
+        "domain.NotificationType": {
             "type": "string",
             "enum": [
                 "task_created",
@@ -721,7 +721,7 @@
                 "NotificationTypeTaskStatusChanged"
             ]
         },
-        "entity.Task": {
+        "domain.Task": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -739,7 +739,7 @@
                 "status": {
                     "allOf": [
                         {
-                            "$ref": "#/definitions/entity.TaskStatus"
+                            "$ref": "#/definitions/domain.TaskStatus"
                         }
                     ],
                     "example": "todo"
@@ -758,7 +758,7 @@
                 }
             }
         },
-        "entity.TaskStatus": {
+        "domain.TaskStatus": {
             "type": "string",
             "enum": [
                 "todo",
@@ -771,7 +771,7 @@
                 "TaskStatusDone"
             ]
         },
-        "entity.User": {
+        "domain.User": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -871,7 +871,7 @@
                 "tasks": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/entity.Task"
+                        "$ref": "#/definitions/domain.Task"
                     }
                 },
                 "total": {
@@ -903,7 +903,7 @@
                     ],
                     "allOf": [
                         {
-                            "$ref": "#/definitions/entity.TaskStatus"
+                            "$ref": "#/definitions/domain.TaskStatus"
                         }
                     ],
                     "example": "in_progress"

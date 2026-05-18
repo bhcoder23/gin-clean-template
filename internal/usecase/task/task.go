@@ -6,19 +6,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bhcoder23/gin-clean-template/internal/entity"
-	"github.com/bhcoder23/gin-clean-template/internal/repo"
+	"github.com/bhcoder23/gin-clean-template/internal/domain"
+	appports "github.com/bhcoder23/gin-clean-template/internal/usecase"
 	"github.com/google/uuid"
 )
 
 // UseCase -.
 type UseCase struct {
-	repo             repo.TaskRepo
-	notificationRepo repo.NotificationRepo
+	repo             appports.TaskStore
+	notificationRepo appports.NotificationStore
 }
 
 // New -.
-func New(r repo.TaskRepo, notificationRepo repo.NotificationRepo) *UseCase {
+func New(r appports.TaskStore, notificationRepo appports.NotificationStore) *UseCase {
 	return &UseCase{
 		repo:             r,
 		notificationRepo: notificationRepo,
@@ -26,56 +26,56 @@ func New(r repo.TaskRepo, notificationRepo repo.NotificationRepo) *UseCase {
 }
 
 // Create -.
-func (uc *UseCase) Create(ctx context.Context, userID, title, description string) (entity.Task, error) {
+func (uc *UseCase) Create(ctx context.Context, userID, title, description string) (domain.Task, error) {
 	now := time.Now().UTC()
 	title = strings.TrimSpace(title)
 	description = strings.TrimSpace(description)
 
 	if title == "" {
-		return entity.Task{}, entity.ErrTaskTitleRequired
+		return domain.Task{}, domain.ErrTaskTitleRequired
 	}
 
-	task := entity.Task{
+	task := domain.Task{
 		ID:          uuid.New().String(),
 		UserID:      userID,
 		Title:       title,
 		Description: description,
-		Status:      entity.TaskStatusTodo,
+		Status:      domain.TaskStatusTodo,
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
 
 	err := uc.repo.Store(ctx, &task)
 	if err != nil {
-		return entity.Task{}, fmt.Errorf("TaskUseCase - Create - uc.repo.Store: %w", err)
+		return domain.Task{}, fmt.Errorf("TaskUseCase - Create - uc.repo.Store: %w", err)
 	}
 
-	if err = uc.storeNotification(ctx, entity.Notification{
+	if err = uc.storeNotification(ctx, domain.Notification{
 		UserID: userID,
 		TaskID: task.ID,
-		Type:   entity.NotificationTypeTaskCreated,
+		Type:   domain.NotificationTypeTaskCreated,
 		Title:  "Task created",
 		Body:   fmt.Sprintf("Task %q was created with status %s.", task.Title, task.Status),
 		Read:   false,
 	}); err != nil {
-		return entity.Task{}, err
+		return domain.Task{}, err
 	}
 
 	return task, nil
 }
 
 // Get -.
-func (uc *UseCase) Get(ctx context.Context, userID, taskID string) (entity.Task, error) {
+func (uc *UseCase) Get(ctx context.Context, userID, taskID string) (domain.Task, error) {
 	task, err := uc.repo.GetByID(ctx, userID, taskID)
 	if err != nil {
-		return entity.Task{}, fmt.Errorf("TaskUseCase - Get - uc.repo.GetByID: %w", err)
+		return domain.Task{}, fmt.Errorf("TaskUseCase - Get - uc.repo.GetByID: %w", err)
 	}
 
 	return task, nil
 }
 
 // List -.
-func (uc *UseCase) List(ctx context.Context, userID string, status *entity.TaskStatus, query string, limit, offset int) ([]entity.Task, int, error) {
+func (uc *UseCase) List(ctx context.Context, userID string, status *domain.TaskStatus, query string, limit, offset int) ([]domain.Task, int, error) {
 	if limit <= 0 {
 		limit = 10
 	}
@@ -84,7 +84,7 @@ func (uc *UseCase) List(ctx context.Context, userID string, status *entity.TaskS
 		offset = 0
 	}
 
-	tasks, total, err := uc.repo.List(ctx, userID, repo.TaskFilter{
+	tasks, total, err := uc.repo.List(ctx, userID, appports.TaskFilter{
 		Status: status,
 		Query:  strings.TrimSpace(query),
 		Limit:  uint64(limit),
@@ -98,22 +98,22 @@ func (uc *UseCase) List(ctx context.Context, userID string, status *entity.TaskS
 }
 
 // Update -.
-func (uc *UseCase) Update(ctx context.Context, userID, taskID, title, description string) (entity.Task, error) {
+func (uc *UseCase) Update(ctx context.Context, userID, taskID, title, description string) (domain.Task, error) {
 	now := time.Now().UTC()
 	title = strings.TrimSpace(title)
 	description = strings.TrimSpace(description)
 
 	if title == "" {
-		return entity.Task{}, entity.ErrTaskTitleRequired
+		return domain.Task{}, domain.ErrTaskTitleRequired
 	}
 
 	task, err := uc.repo.GetByID(ctx, userID, taskID)
 	if err != nil {
-		return entity.Task{}, fmt.Errorf("TaskUseCase - Update - uc.repo.GetByID: %w", err)
+		return domain.Task{}, fmt.Errorf("TaskUseCase - Update - uc.repo.GetByID: %w", err)
 	}
 
-	if task.Status == entity.TaskStatusDone {
-		return entity.Task{}, entity.ErrTaskCompleted
+	if task.Status == domain.TaskStatusDone {
+		return domain.Task{}, domain.ErrTaskCompleted
 	}
 
 	task.Title = title
@@ -122,42 +122,42 @@ func (uc *UseCase) Update(ctx context.Context, userID, taskID, title, descriptio
 
 	err = uc.repo.Update(ctx, &task)
 	if err != nil {
-		return entity.Task{}, fmt.Errorf("TaskUseCase - Update - uc.repo.Update: %w", err)
+		return domain.Task{}, fmt.Errorf("TaskUseCase - Update - uc.repo.Update: %w", err)
 	}
 
 	return task, nil
 }
 
 // Transition -.
-func (uc *UseCase) Transition(ctx context.Context, userID, taskID string, newStatus entity.TaskStatus) (entity.Task, error) {
+func (uc *UseCase) Transition(ctx context.Context, userID, taskID string, newStatus domain.TaskStatus) (domain.Task, error) {
 	now := time.Now().UTC()
 
 	task, err := uc.repo.GetByID(ctx, userID, taskID)
 	if err != nil {
-		return entity.Task{}, fmt.Errorf("TaskUseCase - Transition - uc.repo.GetByID: %w", err)
+		return domain.Task{}, fmt.Errorf("TaskUseCase - Transition - uc.repo.GetByID: %w", err)
 	}
 
 	err = task.Transition(newStatus)
 	if err != nil {
-		return entity.Task{}, err
+		return domain.Task{}, err
 	}
 
 	task.UpdatedAt = now
 
 	err = uc.repo.Update(ctx, &task)
 	if err != nil {
-		return entity.Task{}, fmt.Errorf("TaskUseCase - Transition - uc.repo.Update: %w", err)
+		return domain.Task{}, fmt.Errorf("TaskUseCase - Transition - uc.repo.Update: %w", err)
 	}
 
-	if err = uc.storeNotification(ctx, entity.Notification{
+	if err = uc.storeNotification(ctx, domain.Notification{
 		UserID: userID,
 		TaskID: task.ID,
-		Type:   entity.NotificationTypeTaskStatusChanged,
+		Type:   domain.NotificationTypeTaskStatusChanged,
 		Title:  "Task status changed",
 		Body:   fmt.Sprintf("Task %q moved to %s.", task.Title, task.Status),
 		Read:   false,
 	}); err != nil {
-		return entity.Task{}, err
+		return domain.Task{}, err
 	}
 
 	return task, nil
@@ -170,8 +170,8 @@ func (uc *UseCase) Delete(ctx context.Context, userID, taskID string) error {
 		return fmt.Errorf("TaskUseCase - Delete - uc.repo.GetByID: %w", err)
 	}
 
-	if task.Status == entity.TaskStatusDone {
-		return entity.ErrTaskCompleted
+	if task.Status == domain.TaskStatusDone {
+		return domain.ErrTaskCompleted
 	}
 
 	err = uc.repo.Delete(ctx, userID, taskID)
@@ -182,7 +182,7 @@ func (uc *UseCase) Delete(ctx context.Context, userID, taskID string) error {
 	return nil
 }
 
-func (uc *UseCase) storeNotification(ctx context.Context, notification entity.Notification) error {
+func (uc *UseCase) storeNotification(ctx context.Context, notification domain.Notification) error {
 	notification.ID = uuid.New().String()
 	notification.CreatedAt = time.Now().UTC()
 

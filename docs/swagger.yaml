@@ -1,6 +1,6 @@
 basePath: /v1
 definitions:
-  entity.Notification:
+  domain.Notification:
     properties:
       body:
         example: Task "Ship the scaffold" was created.
@@ -25,22 +25,22 @@ definitions:
         type: string
       type:
         allOf:
-        - $ref: '#/definitions/entity.NotificationType'
+        - $ref: '#/definitions/domain.NotificationType'
         example: task_created
       user_id:
         example: 550e8400-e29b-41d4-a716-446655440000
         type: string
     type: object
-  entity.NotificationList:
+  domain.NotificationList:
     properties:
       notifications:
         items:
-          $ref: '#/definitions/entity.Notification'
+          $ref: '#/definitions/domain.Notification'
         type: array
       total:
         type: integer
     type: object
-  entity.NotificationType:
+  domain.NotificationType:
     enum:
     - task_created
     - task_status_changed
@@ -48,7 +48,7 @@ definitions:
     x-enum-varnames:
     - NotificationTypeTaskCreated
     - NotificationTypeTaskStatusChanged
-  entity.Task:
+  domain.Task:
     properties:
       created_at:
         example: "2026-01-01T00:00:00Z"
@@ -61,7 +61,7 @@ definitions:
         type: string
       status:
         allOf:
-        - $ref: '#/definitions/entity.TaskStatus'
+        - $ref: '#/definitions/domain.TaskStatus'
         example: todo
       title:
         example: My task
@@ -73,7 +73,7 @@ definitions:
         example: 550e8400-e29b-41d4-a716-446655440000
         type: string
     type: object
-  entity.TaskStatus:
+  domain.TaskStatus:
     enum:
     - todo
     - in_progress
@@ -83,7 +83,7 @@ definitions:
     - TaskStatusTodo
     - TaskStatusInProgress
     - TaskStatusDone
-  entity.User:
+  domain.User:
     properties:
       created_at:
         example: "2026-01-01T00:00:00Z"
@@ -155,7 +155,7 @@ definitions:
     properties:
       tasks:
         items:
-          $ref: '#/definitions/entity.Task'
+          $ref: '#/definitions/domain.Task'
         type: array
       total:
         example: 42
@@ -171,7 +171,7 @@ definitions:
     properties:
       status:
         allOf:
-        - $ref: '#/definitions/entity.TaskStatus'
+        - $ref: '#/definitions/domain.TaskStatus'
         enum:
         - todo
         - in_progress
@@ -255,7 +255,7 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/entity.User'
+            $ref: '#/definitions/domain.User'
         "400":
           description: Bad Request
           schema:
@@ -296,7 +296,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/entity.NotificationList'
+            $ref: '#/definitions/domain.NotificationList'
         "400":
           description: Bad Request
           schema:
@@ -330,7 +330,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/entity.Notification'
+            $ref: '#/definitions/domain.Notification'
         "401":
           description: Unauthorized
           schema:
@@ -417,7 +417,7 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/entity.Task'
+            $ref: '#/definitions/domain.Task'
         "400":
           description: Bad Request
           schema:
@@ -480,7 +480,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/entity.Task'
+            $ref: '#/definitions/domain.Task'
         "401":
           description: Unauthorized
           schema:
@@ -521,7 +521,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/entity.Task'
+            $ref: '#/definitions/domain.Task'
         "400":
           description: Bad Request
           schema:
@@ -568,7 +568,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/entity.Task'
+            $ref: '#/definitions/domain.Task'
         "400":
           description: Bad Request
           schema:
@@ -600,7 +600,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/entity.User'
+            $ref: '#/definitions/domain.User'
         "401":
           description: Unauthorized
           schema:

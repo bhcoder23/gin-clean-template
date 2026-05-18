@@ -12,7 +12,7 @@ import (
 type Interface interface {
 	Debug(message any, args ...any)
 	Info(message string, args ...any)
-	Warn(message string, args ...any)
+	Warn(message any, args ...any)
 	Error(message any, args ...any)
 	Fatal(message any, args ...any)
 }
@@ -67,8 +67,14 @@ func (l *Logger) Info(message string, args ...any) {
 }
 
 // Warn -.
-func (l *Logger) Warn(message string, args ...any) {
-	l.log(zerolog.WarnLevel, message, args...)
+func (l *Logger) Warn(message any, args ...any) {
+	if _, ok := message.(error); ok {
+		l.err(zerolog.WarnLevel, message, args...)
+
+		return
+	}
+
+	l.msg(zerolog.WarnLevel, message, args...)
 }
 
 // Error -.

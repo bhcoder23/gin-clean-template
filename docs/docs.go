@@ -97,7 +97,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/entity.User"
+                            "$ref": "#/definitions/domain.User"
                         }
                     },
                     "400": {
@@ -158,7 +158,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/entity.NotificationList"
+                            "$ref": "#/definitions/domain.NotificationList"
                         }
                     },
                     "400": {
@@ -211,7 +211,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/entity.Notification"
+                            "$ref": "#/definitions/domain.Notification"
                         }
                     },
                     "401": {
@@ -344,7 +344,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/entity.Task"
+                            "$ref": "#/definitions/domain.Task"
                         }
                     },
                     "400": {
@@ -397,7 +397,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/entity.Task"
+                            "$ref": "#/definitions/domain.Task"
                         }
                     },
                     "401": {
@@ -460,7 +460,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/entity.Task"
+                            "$ref": "#/definitions/domain.Task"
                         }
                     },
                     "400": {
@@ -576,7 +576,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/entity.Task"
+                            "$ref": "#/definitions/domain.Task"
                         }
                     },
                     "400": {
@@ -626,7 +626,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/entity.User"
+                            "$ref": "#/definitions/domain.User"
                         }
                     },
                     "401": {
@@ -657,7 +657,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "entity.Notification": {
+        "domain.Notification": {
             "type": "object",
             "properties": {
                 "body": {
@@ -691,7 +691,7 @@ const docTemplate = `{
                 "type": {
                     "allOf": [
                         {
-                            "$ref": "#/definitions/entity.NotificationType"
+                            "$ref": "#/definitions/domain.NotificationType"
                         }
                     ],
                     "example": "task_created"
@@ -702,13 +702,13 @@ const docTemplate = `{
                 }
             }
         },
-        "entity.NotificationList": {
+        "domain.NotificationList": {
             "type": "object",
             "properties": {
                 "notifications": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/entity.Notification"
+                        "$ref": "#/definitions/domain.Notification"
                     }
                 },
                 "total": {
@@ -716,7 +716,7 @@ const docTemplate = `{
                 }
             }
         },
-        "entity.NotificationType": {
+        "domain.NotificationType": {
             "type": "string",
             "enum": [
                 "task_created",
@@ -727,7 +727,7 @@ const docTemplate = `{
                 "NotificationTypeTaskStatusChanged"
             ]
         },
-        "entity.Task": {
+        "domain.Task": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -745,7 +745,7 @@ const docTemplate = `{
                 "status": {
                     "allOf": [
                         {
-                            "$ref": "#/definitions/entity.TaskStatus"
+                            "$ref": "#/definitions/domain.TaskStatus"
                         }
                     ],
                     "example": "todo"
@@ -764,7 +764,7 @@ const docTemplate = `{
                 }
             }
         },
-        "entity.TaskStatus": {
+        "domain.TaskStatus": {
             "type": "string",
             "enum": [
                 "todo",
@@ -777,7 +777,7 @@ const docTemplate = `{
                 "TaskStatusDone"
             ]
         },
-        "entity.User": {
+        "domain.User": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -877,7 +877,7 @@ const docTemplate = `{
                 "tasks": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/entity.Task"
+                        "$ref": "#/definitions/domain.Task"
                     }
                 },
                 "total": {
@@ -909,7 +909,7 @@ const docTemplate = `{
                     ],
                     "allOf": [
                         {
-                            "$ref": "#/definitions/entity.TaskStatus"
+                            "$ref": "#/definitions/domain.TaskStatus"
                         }
                     ],
                     "example": "in_progress"

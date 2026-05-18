@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/bhcoder23/gin-clean-template/pkg/logger"
@@ -17,6 +18,7 @@ const (
 	_defaultReadTimeout     = 5 * time.Second
 	_defaultWriteTimeout    = 5 * time.Second
 	_defaultShutdownTimeout = 3 * time.Second
+	_defaultGinMode         = gin.ReleaseMode
 )
 
 // Server -.
@@ -31,6 +33,7 @@ type Server struct {
 	readTimeout     time.Duration
 	writeTimeout    time.Duration
 	shutdownTimeout time.Duration
+	mode            string
 
 	logger logger.Interface
 }
@@ -49,12 +52,20 @@ func New(l logger.Interface, opts ...Option) *Server {
 		readTimeout:     _defaultReadTimeout,
 		writeTimeout:    _defaultWriteTimeout,
 		shutdownTimeout: _defaultShutdownTimeout,
+		mode:            _defaultGinMode,
 		logger:          l,
 	}
 
 	for _, opt := range opts {
 		opt(s)
 	}
+
+	mode := normalizeGinMode(s.mode)
+	if s.mode != "" && mode != strings.ToLower(s.mode) {
+		s.logger.Warn("restapi server - Server - invalid gin mode %q, fallback to %q", s.mode, mode)
+	}
+
+	gin.SetMode(mode)
 
 	app := gin.New()
 	s.App = app
@@ -67,6 +78,19 @@ func New(l logger.Interface, opts ...Option) *Server {
 	}
 
 	return s
+}
+
+func normalizeGinMode(mode string) string {
+	switch strings.ToLower(strings.TrimSpace(mode)) {
+	case gin.DebugMode:
+		return gin.DebugMode
+	case gin.TestMode:
+		return gin.TestMode
+	case "", gin.ReleaseMode:
+		return gin.ReleaseMode
+	default:
+		return gin.ReleaseMode
+	}
 }
 
 // Start -.

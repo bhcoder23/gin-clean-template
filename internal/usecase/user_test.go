@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bhcoder23/gin-clean-template/internal/entity"
+	"github.com/bhcoder23/gin-clean-template/internal/domain"
 	"github.com/bhcoder23/gin-clean-template/internal/usecase/user"
 	"github.com/bhcoder23/gin-clean-template/pkg/jwt"
 	"github.com/stretchr/testify/assert"
@@ -17,12 +17,12 @@ import (
 
 var errUseCaseInternal = errors.New("internal server error")
 
-func newUserUseCase(t *testing.T) (*user.UseCase, *MockUserRepo) {
+func newUserUseCase(t *testing.T) (*user.UseCase, *MockUserStore) {
 	t.Helper()
 
 	ctrl := gomock.NewController(t)
 
-	repo := NewMockUserRepo(ctrl)
+	repo := NewMockUserStore(ctrl)
 	jwtManager := jwt.New("test-secret", time.Hour)
 	useCase := user.New(repo, jwtManager)
 
@@ -50,11 +50,11 @@ func TestRegister(t *testing.T) {
 		t.Parallel()
 
 		uc, repo := newUserUseCase(t)
-		repo.EXPECT().Store(context.Background(), gomock.Any()).Return(entity.ErrUserAlreadyExists)
+		repo.EXPECT().Store(context.Background(), gomock.Any()).Return(domain.ErrUserAlreadyExists)
 
 		_, err := uc.Register(context.Background(), "testuser", "test@example.com", "password123")
 
-		require.ErrorIs(t, err, entity.ErrUserAlreadyExists)
+		require.ErrorIs(t, err, domain.ErrUserAlreadyExists)
 	})
 }
 
@@ -68,7 +68,7 @@ func TestLogin(t *testing.T) {
 		hash, err := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
 		require.NoError(t, err)
 
-		storedUser := entity.User{
+		storedUser := domain.User{
 			ID: "user-id-123", Username: "testuser",
 			Email: "test@example.com", PasswordHash: string(hash),
 		}
@@ -87,7 +87,7 @@ func TestLogin(t *testing.T) {
 		hash, err := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
 		require.NoError(t, err)
 
-		storedUser := entity.User{
+		storedUser := domain.User{
 			ID: "user-id-123", Username: "testuser",
 			Email: "test@example.com", PasswordHash: string(hash),
 		}
@@ -95,7 +95,7 @@ func TestLogin(t *testing.T) {
 
 		token, err := uc.Login(context.Background(), "test@example.com", "wrongpassword")
 
-		require.ErrorIs(t, err, entity.ErrInvalidCredentials)
+		require.ErrorIs(t, err, domain.ErrInvalidCredentials)
 		assert.Empty(t, token)
 	})
 
@@ -103,11 +103,11 @@ func TestLogin(t *testing.T) {
 		t.Parallel()
 
 		uc, repo := newUserUseCase(t)
-		repo.EXPECT().GetByEmail(context.Background(), "notfound@example.com").Return(entity.User{}, entity.ErrUserNotFound)
+		repo.EXPECT().GetByEmail(context.Background(), "notfound@example.com").Return(domain.User{}, domain.ErrUserNotFound)
 
 		token, err := uc.Login(context.Background(), "notfound@example.com", "password123")
 
-		require.ErrorIs(t, err, entity.ErrInvalidCredentials)
+		require.ErrorIs(t, err, domain.ErrInvalidCredentials)
 		assert.Empty(t, token)
 	})
 
@@ -115,12 +115,12 @@ func TestLogin(t *testing.T) {
 		t.Parallel()
 
 		uc, repo := newUserUseCase(t)
-		repo.EXPECT().GetByEmail(context.Background(), "broken@example.com").Return(entity.User{}, errUseCaseInternal)
+		repo.EXPECT().GetByEmail(context.Background(), "broken@example.com").Return(domain.User{}, errUseCaseInternal)
 
 		token, err := uc.Login(context.Background(), "broken@example.com", "password123")
 
 		require.ErrorIs(t, err, errUseCaseInternal)
-		assert.NotErrorIs(t, err, entity.ErrInvalidCredentials)
+		assert.NotErrorIs(t, err, domain.ErrInvalidCredentials)
 		assert.Empty(t, token)
 	})
 }
@@ -128,7 +128,7 @@ func TestLogin(t *testing.T) {
 func TestGetUser(t *testing.T) {
 	t.Parallel()
 
-	expectedUser := entity.User{
+	expectedUser := domain.User{
 		ID:       "user-id-123",
 		Username: "testuser",
 		Email:    "test@example.com",
@@ -150,11 +150,11 @@ func TestGetUser(t *testing.T) {
 		t.Parallel()
 
 		uc, repo := newUserUseCase(t)
-		repo.EXPECT().GetByID(context.Background(), "missing-id").Return(entity.User{}, entity.ErrUserNotFound)
+		repo.EXPECT().GetByID(context.Background(), "missing-id").Return(domain.User{}, domain.ErrUserNotFound)
 
 		_, err := uc.GetUser(context.Background(), "missing-id")
 
-		require.ErrorIs(t, err, entity.ErrUserNotFound)
+		require.ErrorIs(t, err, domain.ErrUserNotFound)
 	})
 }
 
@@ -163,7 +163,7 @@ func TestGetUser_GenericError(t *testing.T) {
 
 	uc, repo := newUserUseCase(t)
 
-	repo.EXPECT().GetByID(context.Background(), "user-id-123").Return(entity.User{}, errUseCaseInternal)
+	repo.EXPECT().GetByID(context.Background(), "user-id-123").Return(domain.User{}, errUseCaseInternal)
 
 	_, err := uc.GetUser(context.Background(), "user-id-123")
 

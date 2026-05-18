@@ -11,19 +11,20 @@ This file applies to the entire repository.
 ## Architecture Rules
 
 - Keep framework-specific code inside adapters only.
-- `Gin` belongs only in `internal/controller/restapi` and `pkg/httpserver`.
-- Do not introduce `gin.Context`, HTTP DTOs, or transport concerns into `internal/entity`, `internal/usecase`, or `internal/repo`.
-- Business rules belong in `internal/usecase` and `internal/entity`, not in handlers or middleware.
-- Repository implementations should stay in `internal/repo/...`; interfaces stay in `internal/repo/contracts.go` or `internal/usecase/contracts.go`.
+- `Gin` belongs only in `internal/transport/restapi` and `pkg/httpserver`.
+- Do not introduce `gin.Context`, HTTP DTOs, or transport concerns into `internal/domain`, `internal/usecase`, or `internal/infra`.
+- Business rules belong in `internal/usecase` and `internal/domain`, not in handlers or middleware.
+- Repository and integration implementations should stay in `internal/infra/...`.
+- Application-facing contracts should stay in `internal/usecase/contracts.go`.
 
 ## REST Conventions
 
 - Follow the existing REST layout:
-  - top-level router in `internal/controller/restapi/router.go`
-  - versioned routes in `internal/controller/restapi/v1`
-  - request DTOs in `internal/controller/restapi/v1/request`
-  - response DTOs in `internal/controller/restapi/v1/response`
-  - transport-only helpers in `internal/controller/restapi/middleware`
+  - top-level router in `internal/transport/restapi/router.go`
+  - versioned routes in `internal/transport/restapi/v1`
+  - request DTOs in `internal/transport/restapi/v1/request`
+  - response DTOs in `internal/transport/restapi/v1/response`
+  - transport-only helpers in `internal/transport/restapi/middleware`
 - Prefer Gin idioms consistently:
   - `ShouldBindJSON`
   - `c.Request.Context()`
@@ -39,7 +40,7 @@ This file applies to the entire repository.
   - `docs/swagger.json`
   - `docs/swagger.yaml`
 - If REST annotations change, regenerate Swagger with:
-  - `go tool swag init --parseDependency -g internal/controller/restapi/router.go`
+  - `go tool swag init --parseDependency -g internal/transport/restapi/router.go`
 - If proto definitions change, regenerate code with:
   - `make proto-v1`
 
@@ -55,16 +56,15 @@ This file applies to the entire repository.
 
 ## Tests and Mocks
 
-- When interface contracts in `internal/repo/contracts.go` or `internal/usecase/contracts.go` change, regenerate mocks in `internal/usecase` via:
+- When interface contracts in `internal/usecase/contracts.go` change, regenerate mocks in `internal/usecase` via:
   - `make mock`
 - Keep tests close to the layer they verify.
 - Prefer focused tests first, then broader verification.
 
 ## Documentation
 
-- Keep `README.md`, `README_CN.md`, and `README_RU.md` aligned when project positioning or framework choices change.
+- Keep `README.md` and `README_CN.md` aligned when project positioning or framework choices change.
 - Keep documentation accurate to the current implementation, especially around:
   - REST framework
   - commands in `Makefile`
   - generated artifacts
-

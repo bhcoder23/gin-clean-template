@@ -75,6 +75,27 @@ func TestInfoAndWarn_LogMessageWithAndWithoutArgs(t *testing.T) {
 	}
 }
 
+func TestWarn_ErrorValueWithContext(t *testing.T) {
+	t.Parallel()
+
+	l, buf := newBufferedLogger("info")
+	l.Warn(errTest, "known request issue")
+
+	out := buf.String()
+
+	if !strings.Contains(out, "\"level\":\"warn\"") {
+		t.Fatalf("expected warn level, got: %s", out)
+	}
+
+	if !strings.Contains(out, "\"message\":\"known request issue\"") {
+		t.Fatalf("expected context message, got: %s", out)
+	}
+
+	if !strings.Contains(out, "\"error\":\"test error\"") {
+		t.Fatalf("expected structured error field, got: %s", out)
+	}
+}
+
 func TestDebug_RespectsLevel(t *testing.T) {
 	t.Parallel()
 

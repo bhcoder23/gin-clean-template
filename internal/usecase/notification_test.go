@@ -5,19 +5,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bhcoder23/gin-clean-template/internal/entity"
-	"github.com/bhcoder23/gin-clean-template/internal/repo"
+	"github.com/bhcoder23/gin-clean-template/internal/domain"
+	appports "github.com/bhcoder23/gin-clean-template/internal/usecase"
 	"github.com/bhcoder23/gin-clean-template/internal/usecase/notification"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
 
-func newNotificationUseCase(t *testing.T) (*notification.UseCase, *MockNotificationRepo) {
+func newNotificationUseCase(t *testing.T) (*notification.UseCase, *MockNotificationStore) {
 	t.Helper()
 
 	ctrl := gomock.NewController(t)
-	mockRepo := NewMockNotificationRepo(ctrl)
+	mockRepo := NewMockNotificationStore(ctrl)
 
 	return notification.New(mockRepo), mockRepo
 }
@@ -26,12 +26,12 @@ func TestNotificationList(t *testing.T) {
 	t.Parallel()
 
 	unreadOnly := true
-	expected := []entity.Notification{
+	expected := []domain.Notification{
 		{
 			ID:        "notification-1",
 			UserID:    "user-id-123",
 			TaskID:    "task-id-123",
-			Type:      entity.NotificationTypeTaskCreated,
+			Type:      domain.NotificationTypeTaskCreated,
 			Title:     "Task created",
 			Body:      "Task \"Ship the scaffold\" was created.",
 			Read:      false,
@@ -40,7 +40,7 @@ func TestNotificationList(t *testing.T) {
 	}
 
 	uc, mockRepo := newNotificationUseCase(t)
-	mockRepo.EXPECT().List(context.Background(), "user-id-123", repo.NotificationFilter{
+	mockRepo.EXPECT().List(context.Background(), "user-id-123", appports.NotificationFilter{
 		UnreadOnly: &unreadOnly,
 		Limit:      uint64(10),
 		Offset:     uint64(0),
@@ -57,11 +57,11 @@ func TestNotificationMarkRead(t *testing.T) {
 	t.Parallel()
 
 	uc, mockRepo := newNotificationUseCase(t)
-	existing := entity.Notification{
+	existing := domain.Notification{
 		ID:        "notification-1",
 		UserID:    "user-id-123",
 		TaskID:    "task-id-123",
-		Type:      entity.NotificationTypeTaskCreated,
+		Type:      domain.NotificationTypeTaskCreated,
 		Title:     "Task created",
 		Body:      "Task \"Ship the scaffold\" was created.",
 		Read:      false,
@@ -83,11 +83,11 @@ func TestNotificationMarkReadAlreadyRead(t *testing.T) {
 
 	readAt := time.Now().UTC()
 	uc, mockRepo := newNotificationUseCase(t)
-	existing := entity.Notification{
+	existing := domain.Notification{
 		ID:        "notification-1",
 		UserID:    "user-id-123",
 		TaskID:    "task-id-123",
-		Type:      entity.NotificationTypeTaskCreated,
+		Type:      domain.NotificationTypeTaskCreated,
 		Title:     "Task created",
 		Body:      "Task \"Ship the scaffold\" was created.",
 		Read:      true,

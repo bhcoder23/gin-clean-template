@@ -162,9 +162,17 @@ func (s *Server) serveCall(d *amqp.Delivery) {
 
 	response, err := callHandler(d)
 	if err != nil {
-		s.publish(d, nil, rmqrpc.ErrInternalServer.Error())
+		status := rmqrpc.ErrInternalServer.Error()
+		if rmqrpc.IsKnownStatus(err.Error()) {
+			status = err.Error()
+		}
 
-		s.logger.Error(err, "rmq_rpc server - Server - serveCall - callHandler")
+		s.publish(d, nil, status)
+		if rmqrpc.IsKnownStatus(status) {
+			s.logger.Warn(err, "rmq_rpc server - Server - serveCall - callHandler")
+		} else {
+			s.logger.Error(err, "rmq_rpc server - Server - serveCall - callHandler")
+		}
 
 		return
 	}

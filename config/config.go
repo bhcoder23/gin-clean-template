@@ -31,6 +31,7 @@ type (
 	// HTTP -.
 	HTTP struct {
 		Enabled bool   `env:"HTTP_ENABLED" envDefault:"true"`
+		Mode    string `env:"GIN_MODE"     envDefault:"release"`
 		Port    string `env:"HTTP_PORT"    envDefault:"8080"`
 	}
 

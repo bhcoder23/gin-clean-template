@@ -299,9 +299,9 @@ For example:
 go run -tags migrate ./cmd/app
 ```
 
-### `internal/controller`
+### `internal/transport`
 
-Server handler layer (MVC controllers). The template includes 4 optional transports:
+Incoming adapter layer. The template includes 4 optional transports:
 
 - AMQP RPC (based on RabbitMQ as transport)
 - NATS RPC (based on NATS as transport)
@@ -314,11 +314,11 @@ Server routers are written in the same style:
 - For each group, its own router structure is created, the methods of which process paths
 - The structure of the business logic is injected into the router structure, which will be called by the handlers
 
-#### `internal/controller/amqp_rpc`
+#### `internal/transport/amqp_rpc`
 
 Simple RPC versioning.
 For v2, we will need to add the `amqp_rpc/v2` folder with the same content.
-And in the file `internal/controller/amqp_rpc/router.go` add the line:
+And in the file `internal/transport/amqp_rpc/router.go` add the line:
 
 ```go
 routes := make(map[string]server.CallHandler)
@@ -332,12 +332,12 @@ routes := make(map[string]server.CallHandler)
 }
 ```
 
-#### `internal/controller/grpc`
+#### `internal/transport/grpc`
 
 Simple gRPC versioning.
 For v2, we will need to add the `grpc/v2` folder with the same content.
 Also add the `v2` folder to the proto files in `docs/proto`.
-And in the file `internal/controller/grpc/router.go` add the line:
+And in the file `internal/transport/grpc/router.go` add the line:
 
 ```go
 {
@@ -355,11 +355,11 @@ And in the file `internal/controller/grpc/router.go` add the line:
 reflection.Register(app)
 ```
 
-#### `internal/controller/nats_rpc`
+#### `internal/transport/nats_rpc`
 
 Simple RPC versioning.
 For v2, we will need to add the `nats_rpc/v2` folder with the same content.
-And in the file `internal/controller/nats_rpc/router.go` add the line:
+And in the file `internal/transport/nats_rpc/router.go` add the line:
 
 ```go
 routes := make(map[string]server.CallHandler)
@@ -373,11 +373,11 @@ routes := make(map[string]server.CallHandler)
 }
 ```
 
-#### `internal/controller/restapi`
+#### `internal/transport/restapi`
 
 Simple REST versioning.
 For v2, we will need to add the `restapi/v2` folder with the same content.
-And in the file `internal/controller/restapi/router.go` add the line:
+And in the file `internal/transport/restapi/router.go` add the line:
 
 ```go
 apiV1Group := app.Group("/v1")
@@ -395,31 +395,26 @@ Instead of [Gin](https://github.com/gin-gonic/gin), you can use any other http f
 In `router.go` and above the handler methods, there are comments for generating swagger documentation
 using [swag](https://github.com/swaggo/swag).
 
-### `internal/entity`
+### `internal/domain`
 
-Entities of business logic (models) can be used in any layer.
-There can also be methods, for example, for validation.
+Core domain models and the rules that belong to them.
+This layer contains entities, enums, value objects, and domain errors that should stay independent from transport and storage concerns.
 
 ### `internal/usecase`
 
-Business logic.
+Application business logic.
 
 - Methods are grouped by area of application (on a common basis)
 - Each group has its own structure
 - One file - one structure
 
-Repositories, webapi, rpc, and other business logic structures are injected into business logic structures
+Use cases depend on contracts defined in `internal/usecase/contracts.go`.
+Persistence implementations, transport adapters, and reusable technical packages are injected into use cases
 (see [Dependency Injection](#dependency-injection)).
 
-#### `internal/repo/persistent`
+#### `internal/infra/persistence`
 
-A repository is an abstract storage (database) that business logic works with.
-
-#### `internal/repo/webapi`
-
-It is an abstract web API that business logic works with.
-For example, it could be another microservice that business logic accesses via the REST API.
-The package name changes depending on the purpose.
+Persistence implementations for PostgreSQL-backed repositories used by the use case layer.
 
 ### `pkg/rabbitmq`
 
@@ -504,16 +499,16 @@ Business logic has an interface for working with an _abstract_ database or _abst
 - All components of this layer are unaware of each other's existence. How to call another from one tool? Not directly,
   only through the inner layer of business logic.
 - All calls to the inner layer are made through the interface (!).
-- Data is transferred in a format that is convenient for business logic (`internal/entity`).
+- Data is transferred in a format that is convenient for business logic (`internal/domain`).
 
-For example, you need to access the database from HTTP (controller).
+For example, you need to access the database from HTTP transport.
 Both HTTP and database are in the outer layer, which means they know nothing about each other.
 The communication between them is carried out through `usecase` (business logic):
 
 ```
     HTTP > usecase
-           usecase > repository (Postgres)
-           usecase < repository (Postgres)
+           usecase > persistence contract
+           usecase < persistence contract
     HTTP < usecase
 ```
 
@@ -526,14 +521,14 @@ Or more complex business logic:
 
 ```
     HTTP > usecase
-           usecase > repository
-           usecase < repository
-           usecase > webapi
-           usecase < webapi
+           usecase > persistence contract
+           usecase < persistence contract
+           usecase > external integration contract
+           usecase < external integration contract
            usecase > RPC
            usecase < RPC
-           usecase > repository
-           usecase < repository
+           usecase > persistence contract
+           usecase < persistence contract
     HTTP < usecase
 ```
 
@@ -544,20 +539,20 @@ Or more complex business logic:
 ### Clean Architecture Terminology
 
 - **Entities** are structures that business logic operates on.
-  They are located in the `internal/entity` folder.
+  They are located in the `internal/domain` folder.
   In MVC terms, entities are models.
 - **Use Cases** is business logic located in `internal/usecase`.
 
 The layer with which business logic directly interacts is usually called the _infrastructure_ layer.
-These can be repositories `internal/repo/persistent`, external webapi `internal/repo/webapi`, any pkg, and other
-microservices.
-In the template, the _infrastructure_ packages are located inside `internal/repo`.
+These can be persistence implementations in `internal/infra/persistence`, technical clients in `pkg`, and other
+integration adapters.
+In the template, the _infrastructure_ packages are located inside `internal/infra`.
 
 You can choose how to call the entry points as you wish. The options are:
 
-- controller (in our case)
-- delivery
 - transport
+- controller
+- delivery
 - gateways
 - entrypoints
 - primary

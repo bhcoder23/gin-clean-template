@@ -293,9 +293,9 @@ Protobuf 文件。它们用于为 gRPC 服务生成 Go 代码。
 go run -tags migrate ./cmd/app
 ```
 
-### `internal/controller`
+### `internal/transport`
 
-服务器处理层（MVC 控制器）。模板包含 4 种可选 transport：
+入口适配器层。模板包含 4 种可选 transport：
 
 - AMQP RPC（基于 RabbitMQ 作为传输）
 - NATS RPC（基于 NATS 作为传输）
@@ -308,11 +308,11 @@ go run -tags migrate ./cmd/app
 - 为每个组创建自己的路由器结构，其方法处理路径
 - 业务逻辑的结构被注入到路由器结构中，处理程序将调用它
 
-#### `internal/controller/amqp_rpc`
+#### `internal/transport/amqp_rpc`
 
 简单的 RPC 版本控制。  
 对于 v2，我们需要添加 `amqp_rpc/v2` 文件夹，内容相同。  
-并在文件 `internal/controller/amqp_rpc/router.go` 中添加以下行：
+并在文件 `internal/transport/amqp_rpc/router.go` 中添加以下行：
 
 ```go
 routes := make(map[string]server.CallHandler)
@@ -326,12 +326,12 @@ routes := make(map[string]server.CallHandler)
 }
 ```
 
-#### `internal/controller/grpc`
+#### `internal/transport/grpc`
 
 简单的 gRPC 版本控制。  
 对于 v2，我们需要添加 `grpc/v2` 文件夹，内容相同。  
 还需要将 `v2` 文件夹添加到 `docs/proto` 中的 proto 文件中。  
-并在文件 `internal/controller/grpc/router.go` 中添加以下行：
+并在文件 `internal/transport/grpc/router.go` 中添加以下行：
 
 ```go
 {
@@ -349,11 +349,11 @@ routes := make(map[string]server.CallHandler)
 reflection.Register(app)
 ```
 
-#### `internal/controller/nats_rpc`
+#### `internal/transport/nats_rpc`
 
 简单的 RPC 版本控制。  
 对于 v2，我们需要添加 `nats_rpc/v2` 文件夹，内容相同。  
-并在文件 `internal/controller/nats_rpc/router.go` 中添加以下行：
+并在文件 `internal/transport/nats_rpc/router.go` 中添加以下行：
 
 ```go
 routes := make(map[string]server.CallHandler)
@@ -367,11 +367,11 @@ routes := make(map[string]server.CallHandler)
 }
 ```
 
-#### `internal/controller/restapi`
+#### `internal/transport/restapi`
 
 简单的 REST 版本控制
 对于v2版本，我们需要添加`restapi/v2`文件夹，内容相同
-在文件 `internal/controller/restapi/router.go` 中添加以下行：
+在文件 `internal/transport/restapi/router.go` 中添加以下行：
 
 ```go
 apiV1Group := app.Group("/v1")
@@ -387,30 +387,26 @@ apiV2Group := app.Group("/v2")
 除了 [Gin](https://github.com/gin-gonic/gin)，您可以使用任何其他 http 框架。
 在 `router.go` 及以上的处理程序方法中，可以使用[swag](https://github.com/swaggo/swag) swagger 通过注释生成swagger文档.
 
-### `internal/entity`
+### `internal/domain`
 
-业务逻辑实体（模型）可用于任何层.
-这里包括一些方法，例如：参数检验.
+核心领域模型以及直接属于模型本身的规则。
+这一层适合放实体、枚举、值对象和领域错误，并保持其独立于 transport 和存储实现。
 
 ### `internal/usecase`
 
-业务逻辑.
+应用层业务逻辑。
 
 - 方法按应用领域分组（在共同的基础上）
 - 每个组都有自己的结构
 - 一个文件对应一个结构
-  Repositories、webapi、rpc等业务逻辑结构被注入到业务逻辑结构中
-  (阅读 [依赖注入](#dependency-injection)).
 
-#### `internal/repo/persistent`
+`usecase` 通过 `internal/usecase/contracts.go` 中定义的抽象依赖外部能力。
+持久化实现、传输适配器和可复用技术包通过依赖注入接入 usecase
+（阅读 [依赖注入](#dependency-injection)）。
 
-是持久化存储的业务逻辑逻辑抽象,如数据库.
+#### `internal/infra/persistence`
 
-#### `internal/repo/webapi`
-
-是webapi业务逻辑使用的抽象.
-例如，它可能是业务逻辑通过 REST API 访问的另一个微服务。
-包名称根据业务的实际用途进行命名
+PostgreSQL 等持久化仓储的具体实现，供 usecase 通过契约调用。
 
 ### `pkg/rabbitmq`
 
@@ -489,16 +485,16 @@ func (uc *UseCase) Do() {
 
 - 该层的所有组件都不知道彼此的存在。如何进行组件间的调用呢? 只能通过业务逻辑的内层间接调用
 - 所有对内层的调用都是通过接口进行的(!)
-- 为了便捷地进行业务数据传输，数据格式得进行标标准化（`internal/entity`）。
+- 为了便捷地进行业务数据传输，数据格式得进行标标准化（`internal/domain`）。
 
-例如，您需要从 HTTP（控制器）访问数据库
-HTTP 和数据库都在外层，这意味着他们彼此无法感知
+例如，您需要从 HTTP transport 访问数据库。
+HTTP 和数据库都在外层，这意味着它们彼此无法感知。
 它们之间的通信是通过`usecase`（业务逻辑）进行的：
 
 ```
     HTTP > usecase
-           usecase > repository (repo)
-           usecase < repository (repo)
+           usecase > persistence contract
+           usecase < persistence contract
     HTTP < usecase
 ```
 
@@ -510,14 +506,14 @@ HTTP 和数据库都在外层，这意味着他们彼此无法感知
 
 ```
     HTTP > usecase
-           usecase > repository
-           usecase < repository
-           usecase > webapi
-           usecase < webapi
+           usecase > persistence contract
+           usecase < persistence contract
+           usecase > external integration contract
+           usecase < external integration contract
            usecase > RPC
            usecase < RPC
-           usecase > repository
-           usecase < repository
+           usecase > persistence contract
+           usecase < persistence contract
     HTTP < usecase
 ```
 
@@ -528,19 +524,19 @@ HTTP 和数据库都在外层，这意味着他们彼此无法感知
 ### 整洁的架构相关术语
 
 - **ENTITY**是业务逻辑运行的结构。
-  它们位于`internal/entity`文件夹中。
+  它们位于`internal/domain`文件夹中。
   在 MVC 术语中，实体是models
 
 - **Use Cases** 业务逻辑位于 `internal/usecase` 中
   与业务逻辑直接交互的层通常称为_infrastructure_ 层
-  这些可以是存储库 `internal/repo/persistent`、外部 webapi `internal/repo/webapi`、任何包和其他微服务。
-  在模板中，_infrastructure_ 包位于 `internal/repo` 中
+  这些可以是 `internal/infra/persistence` 中的持久化实现、`pkg` 中的技术组件以及其他集成适配器。
+  在模板中，_infrastructure_ 包位于 `internal/infra` 中
 
 您可以根据需要决定你要调用的入口点，包括：
 
+- transport
 - controller
 - delivery
-- transport
 - gateways
 - entrypoints
 - primary
