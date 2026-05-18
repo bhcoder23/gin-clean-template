@@ -7,11 +7,11 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-// TranslationController -.
-type TranslationController struct {
-	v1.UnimplementedTranslationServer
+// NotificationController -.
+type NotificationController struct {
+	v1.UnimplementedNotificationServiceServer
 
-	t usecase.Translation
+	n usecase.Notification
 	l logger.Interface
 	v *validator.Validate
 }

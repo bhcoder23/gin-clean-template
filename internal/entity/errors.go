@@ -3,9 +3,10 @@ package entity
 import "errors"
 
 var (
-	ErrUserNotFound       = errors.New("user not found")
-	ErrUserAlreadyExists  = errors.New("user already exists")
-	ErrInvalidCredentials = errors.New("invalid credentials")
-	ErrTaskNotFound       = errors.New("task not found")
-	ErrInvalidTransition  = errors.New("invalid status transition")
+	ErrUserNotFound         = errors.New("user not found")
+	ErrUserAlreadyExists    = errors.New("user already exists")
+	ErrInvalidCredentials   = errors.New("invalid credentials")
+	ErrTaskNotFound         = errors.New("task not found")
+	ErrInvalidTransition    = errors.New("invalid status transition")
+	ErrNotificationNotFound = errors.New("notification not found")
 )

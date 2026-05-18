@@ -309,7 +309,7 @@ func authenticatedPayload(token string, data any) map[string]any {
 func grpcAuthCtx(t *testing.T, token string) context.Context {
 	t.Helper()
 
-	return metadata.AppendToOutgoingContext(t.Context(), "authorization", token)
+	return metadata.AppendToOutgoingContext(t.Context(), "authorization", "Bearer "+token)
 }
 
 // parseJSON is a generic JSON parser for HTTP responses.

@@ -14,9 +14,8 @@ import (
 	natsrpc "github.com/bhcoder23/gin-clean-template/internal/controller/nats_rpc"
 	"github.com/bhcoder23/gin-clean-template/internal/controller/restapi"
 	"github.com/bhcoder23/gin-clean-template/internal/repo/persistent"
-	"github.com/bhcoder23/gin-clean-template/internal/repo/webapi"
+	"github.com/bhcoder23/gin-clean-template/internal/usecase/notification"
 	"github.com/bhcoder23/gin-clean-template/internal/usecase/task"
-	"github.com/bhcoder23/gin-clean-template/internal/usecase/translation"
 	"github.com/bhcoder23/gin-clean-template/internal/usecase/user"
 	"github.com/bhcoder23/gin-clean-template/pkg/grpcserver"
 	"github.com/bhcoder23/gin-clean-template/pkg/httpserver"
@@ -29,9 +28,9 @@ import (
 )
 
 type useCases struct {
-	translation *translation.UseCase
-	user        *user.UseCase
-	task        *task.UseCase
+	notification *notification.UseCase
+	user         *user.UseCase
+	task         *task.UseCase
 }
 
 type servers struct {
@@ -64,12 +63,12 @@ func (t transportSet) any() bool {
 func initUseCases(pg *postgres.Postgres, jwtManager *jwt.Manager) useCases {
 	userRepo := persistent.NewUserRepo(pg)
 	taskRepo := persistent.NewTaskRepo(pg)
-	translationRepo := persistent.NewTranslationRepo(pg)
+	notificationRepo := persistent.NewNotificationRepo(pg)
 
 	return useCases{
-		user:        user.New(userRepo, jwtManager),
-		task:        task.New(taskRepo),
-		translation: translation.New(translationRepo, webapi.New()),
+		user:         user.New(userRepo, jwtManager),
+		task:         task.New(taskRepo, notificationRepo),
+		notification: notification.New(notificationRepo),
 	}
 }
 
@@ -82,7 +81,7 @@ func initServers(cfg *config.Config, uc useCases, jwtManager *jwt.Manager, l log
 	var s servers
 
 	if enabled.rmq {
-		rmqRouter := amqprpc.NewRouter(uc.translation, uc.user, uc.task, jwtManager, l)
+		rmqRouter := amqprpc.NewRouter(uc.notification, uc.user, uc.task, jwtManager, l)
 
 		rmqServer, err := rmqRPCServer.New(cfg.RMQ.URL, cfg.RMQ.ServerExchange, rmqRouter, l)
 		if err != nil {
@@ -93,7 +92,7 @@ func initServers(cfg *config.Config, uc useCases, jwtManager *jwt.Manager, l log
 	}
 
 	if enabled.nats {
-		natsRouter := natsrpc.NewRouter(uc.translation, uc.user, uc.task, jwtManager, l)
+		natsRouter := natsrpc.NewRouter(uc.notification, uc.user, uc.task, jwtManager, l)
 
 		natsServer, err := natsRPCServer.New(cfg.NATS.URL, cfg.NATS.ServerExchange, natsRouter, l)
 		if err != nil {
@@ -108,14 +107,14 @@ func initServers(cfg *config.Config, uc useCases, jwtManager *jwt.Manager, l log
 			grpcserver.Port(cfg.GRPC.Port),
 			grpcserver.ServerOptions(pbgrpc.UnaryInterceptor(grpcmw.AuthInterceptor(jwtManager))),
 		)
-		grpc.NewRouter(grpcServer.App, uc.translation, uc.user, uc.task, l)
+		grpc.NewRouter(grpcServer.App, uc.notification, uc.user, uc.task, l)
 
 		s.grpc = grpcServer
 	}
 
 	if enabled.http {
 		httpServer := httpserver.New(l, httpserver.Port(cfg.HTTP.Port))
-		restapi.NewRouter(httpServer.App, cfg, uc.translation, uc.user, uc.task, jwtManager, l)
+		restapi.NewRouter(httpServer.App, cfg, uc.notification, uc.user, uc.task, jwtManager, l)
 
 		s.http = httpServer
 	}

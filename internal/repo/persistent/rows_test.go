@@ -14,10 +14,10 @@ import (
 var errRows = errors.New("rows error")
 
 type fakeRows struct {
-	index int
-	err   error
-	tasks []entity.Task
-	trs   []entity.Translation
+	index         int
+	err           error
+	tasks         []entity.Task
+	notifications []entity.Notification
 }
 
 func (r *fakeRows) Close() {}
@@ -43,7 +43,7 @@ func (r *fakeRows) Next() bool {
 		return false
 	}
 
-	if r.index < len(r.trs) {
+	if r.index < len(r.notifications) {
 		return true
 	}
 
@@ -66,13 +66,18 @@ func (r *fakeRows) Scan(dest ...any) error {
 		return nil
 	}
 
-	translation := r.trs[r.index]
+	notification := r.notifications[r.index]
 	r.index++
 
-	*(dest[0].(*string)) = translation.Source
-	*(dest[1].(*string)) = translation.Destination
-	*(dest[2].(*string)) = translation.Original
-	*(dest[3].(*string)) = translation.Translation
+	*(dest[0].(*string)) = notification.ID
+	*(dest[1].(*string)) = notification.UserID
+	*(dest[2].(*string)) = notification.TaskID
+	*(dest[3].(*entity.NotificationType)) = notification.Type
+	*(dest[4].(*string)) = notification.Title
+	*(dest[5].(*string)) = notification.Body
+	*(dest[6].(*bool)) = notification.Read
+	*(dest[7].(*time.Time)) = notification.CreatedAt
+	*(dest[8].(**time.Time)) = notification.ReadAt
 
 	return nil
 }
@@ -115,23 +120,28 @@ func TestCollectTaskRowsChecksIteratorError(t *testing.T) {
 	require.ErrorIs(t, err, errRows)
 }
 
-func TestCollectTranslationRowsChecksIteratorError(t *testing.T) {
+func TestCollectNotificationRowsChecksIteratorError(t *testing.T) {
 	t.Parallel()
 
+	now := time.Now().UTC()
 	rows := &fakeRows{
 		err: errRows,
-		trs: []entity.Translation{
+		notifications: []entity.Notification{
 			{
-				Source:      "auto",
-				Destination: "en",
-				Original:    "你好",
-				Translation: "hello",
+				ID:        "notification-1",
+				UserID:    "user-1",
+				TaskID:    "task-1",
+				Type:      entity.NotificationTypeTaskCreated,
+				Title:     "Task created",
+				Body:      "Task created.",
+				Read:      false,
+				CreatedAt: now,
 			},
 		},
 	}
 
-	translations, err := collectTranslationRows(rows)
+	notifications, err := collectNotificationRows(rows, 10)
 
-	require.Nil(t, translations)
+	require.Nil(t, notifications)
 	require.ErrorIs(t, err, errRows)
 }

@@ -151,36 +151,41 @@ func TestNewListTasksResponse_Empty(t *testing.T) {
 	assert.Equal(t, int32(0), resp.Total)
 }
 
-func TestNewTranslationHistory(t *testing.T) {
+func TestNewListNotificationsResponse(t *testing.T) {
 	t.Parallel()
 
-	history := entity.TranslationHistory{
-		History: []entity.Translation{
-			{
-				Source:      "en",
-				Destination: "ru",
-				Original:    "hello",
-				Translation: "привет",
-			},
-			{
-				Source:      "ru",
-				Destination: "en",
-				Original:    "мир",
-				Translation: "world",
-			},
+	now := time.Date(2026, 2, 10, 8, 0, 0, 0, time.UTC)
+	notifications := []entity.Notification{
+		{
+			ID:        "notification-1",
+			UserID:    "user-id-123",
+			TaskID:    "task-id-123",
+			Type:      entity.NotificationTypeTaskCreated,
+			Title:     "Task created",
+			Body:      "Task created.",
+			Read:      false,
+			CreatedAt: now,
+		},
+		{
+			ID:        "notification-2",
+			UserID:    "user-id-123",
+			TaskID:    "task-id-123",
+			Type:      entity.NotificationTypeTaskStatusChanged,
+			Title:     "Task status changed",
+			Body:      "Task moved to done.",
+			Read:      true,
+			CreatedAt: now,
+			ReadAt:    &now,
 		},
 	}
 
-	resp := response.NewTranslationHistory(history)
+	resp := response.NewListNotificationsResponse(notifications, 2)
 
 	require.NotNil(t, resp)
-	require.Len(t, resp.History, 2)
-	assert.Equal(t, "en", resp.History[0].Source)
-	assert.Equal(t, "ru", resp.History[0].Destination)
-	assert.Equal(t, "hello", resp.History[0].Original)
-	assert.Equal(t, "привет", resp.History[0].Translation)
-	assert.Equal(t, "ru", resp.History[1].Source)
-	assert.Equal(t, "en", resp.History[1].Destination)
-	assert.Equal(t, "мир", resp.History[1].Original)
-	assert.Equal(t, "world", resp.History[1].Translation)
+	require.Len(t, resp.Notifications, 2)
+	assert.Equal(t, "notification-1", resp.Notifications[0].Id)
+	assert.Equal(t, "task_created", resp.Notifications[0].Type)
+	assert.Equal(t, "notification-2", resp.Notifications[1].Id)
+	assert.Equal(t, "2026-02-10T08:00:00Z", resp.Notifications[1].ReadAt)
+	assert.Equal(t, int32(2), resp.Total)
 }

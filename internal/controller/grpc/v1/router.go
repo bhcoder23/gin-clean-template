@@ -8,11 +8,11 @@ import (
 	pbgrpc "google.golang.org/grpc"
 )
 
-// NewTranslationRoutes -.
-func NewTranslationRoutes(app *pbgrpc.Server, t usecase.Translation, l logger.Interface) {
-	r := &TranslationController{t: t, l: l, v: validator.New(validator.WithRequiredStructEnabled())}
+// NewNotificationRoutes -.
+func NewNotificationRoutes(app *pbgrpc.Server, n usecase.Notification, l logger.Interface) {
+	r := &NotificationController{n: n, l: l, v: validator.New(validator.WithRequiredStructEnabled())}
 
-	v1.RegisterTranslationServer(app, r)
+	v1.RegisterNotificationServiceServer(app, r)
 }
 
 // NewAuthRoutes -.

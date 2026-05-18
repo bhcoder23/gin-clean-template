@@ -18,96 +18,87 @@ import (
 	gomock "go.uber.org/mock/gomock"
 )
 
-// MockTranslationRepo is a mock of TranslationRepo interface.
-type MockTranslationRepo struct {
+// MockNotificationRepo is a mock of NotificationRepo interface.
+type MockNotificationRepo struct {
 	ctrl     *gomock.Controller
-	recorder *MockTranslationRepoMockRecorder
+	recorder *MockNotificationRepoMockRecorder
 	isgomock struct{}
 }
 
-// MockTranslationRepoMockRecorder is the mock recorder for MockTranslationRepo.
-type MockTranslationRepoMockRecorder struct {
-	mock *MockTranslationRepo
+// MockNotificationRepoMockRecorder is the mock recorder for MockNotificationRepo.
+type MockNotificationRepoMockRecorder struct {
+	mock *MockNotificationRepo
 }
 
-// NewMockTranslationRepo creates a new mock instance.
-func NewMockTranslationRepo(ctrl *gomock.Controller) *MockTranslationRepo {
-	mock := &MockTranslationRepo{ctrl: ctrl}
-	mock.recorder = &MockTranslationRepoMockRecorder{mock}
+// NewMockNotificationRepo creates a new mock instance.
+func NewMockNotificationRepo(ctrl *gomock.Controller) *MockNotificationRepo {
+	mock := &MockNotificationRepo{ctrl: ctrl}
+	mock.recorder = &MockNotificationRepoMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockTranslationRepo) EXPECT() *MockTranslationRepoMockRecorder {
+func (m *MockNotificationRepo) EXPECT() *MockNotificationRepoMockRecorder {
 	return m.recorder
 }
 
-// GetHistory mocks base method.
-func (m *MockTranslationRepo) GetHistory(ctx context.Context, userID string) ([]entity.Translation, error) {
+// GetByID mocks base method.
+func (m *MockNotificationRepo) GetByID(ctx context.Context, userID, notificationID string) (entity.Notification, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetHistory", ctx, userID)
-	ret0, _ := ret[0].([]entity.Translation)
+	ret := m.ctrl.Call(m, "GetByID", ctx, userID, notificationID)
+	ret0, _ := ret[0].(entity.Notification)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetHistory indicates an expected call of GetHistory.
-func (mr *MockTranslationRepoMockRecorder) GetHistory(ctx, userID any) *gomock.Call {
+// GetByID indicates an expected call of GetByID.
+func (mr *MockNotificationRepoMockRecorder) GetByID(ctx, userID, notificationID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHistory", reflect.TypeOf((*MockTranslationRepo)(nil).GetHistory), ctx, userID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockNotificationRepo)(nil).GetByID), ctx, userID, notificationID)
+}
+
+// List mocks base method.
+func (m *MockNotificationRepo) List(ctx context.Context, userID string, filter repo.NotificationFilter) ([]entity.Notification, int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, userID, filter)
+	ret0, _ := ret[0].([]entity.Notification)
+	ret1, _ := ret[1].(int)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// List indicates an expected call of List.
+func (mr *MockNotificationRepoMockRecorder) List(ctx, userID, filter any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockNotificationRepo)(nil).List), ctx, userID, filter)
 }
 
 // Store mocks base method.
-func (m *MockTranslationRepo) Store(ctx context.Context, userID string, t entity.Translation) error {
+func (m *MockNotificationRepo) Store(ctx context.Context, notification *entity.Notification) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Store", ctx, userID, t)
+	ret := m.ctrl.Call(m, "Store", ctx, notification)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Store indicates an expected call of Store.
-func (mr *MockTranslationRepoMockRecorder) Store(ctx, userID, t any) *gomock.Call {
+func (mr *MockNotificationRepoMockRecorder) Store(ctx, notification any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Store", reflect.TypeOf((*MockTranslationRepo)(nil).Store), ctx, userID, t)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Store", reflect.TypeOf((*MockNotificationRepo)(nil).Store), ctx, notification)
 }
 
-// MockTranslationWebAPI is a mock of TranslationWebAPI interface.
-type MockTranslationWebAPI struct {
-	ctrl     *gomock.Controller
-	recorder *MockTranslationWebAPIMockRecorder
-	isgomock struct{}
-}
-
-// MockTranslationWebAPIMockRecorder is the mock recorder for MockTranslationWebAPI.
-type MockTranslationWebAPIMockRecorder struct {
-	mock *MockTranslationWebAPI
-}
-
-// NewMockTranslationWebAPI creates a new mock instance.
-func NewMockTranslationWebAPI(ctrl *gomock.Controller) *MockTranslationWebAPI {
-	mock := &MockTranslationWebAPI{ctrl: ctrl}
-	mock.recorder = &MockTranslationWebAPIMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockTranslationWebAPI) EXPECT() *MockTranslationWebAPIMockRecorder {
-	return m.recorder
-}
-
-// Translate mocks base method.
-func (m *MockTranslationWebAPI) Translate(ctx context.Context, t entity.Translation) (entity.Translation, error) {
+// Update mocks base method.
+func (m *MockNotificationRepo) Update(ctx context.Context, notification *entity.Notification) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Translate", ctx, t)
-	ret0, _ := ret[0].(entity.Translation)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "Update", ctx, notification)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
-// Translate indicates an expected call of Translate.
-func (mr *MockTranslationWebAPIMockRecorder) Translate(ctx, t any) *gomock.Call {
+// Update indicates an expected call of Update.
+func (mr *MockNotificationRepoMockRecorder) Update(ctx, notification any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Translate", reflect.TypeOf((*MockTranslationWebAPI)(nil).Translate), ctx, t)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockNotificationRepo)(nil).Update), ctx, notification)
 }
 
 // MockUserRepo is a mock of UserRepo interface.

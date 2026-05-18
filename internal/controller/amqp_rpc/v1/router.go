@@ -9,14 +9,14 @@ import (
 )
 
 // NewRoutes -.
-func NewRoutes(routes map[string]server.CallHandler, t usecase.Translation, u usecase.User, tk usecase.Task, j *jwt.Manager, l logger.Interface) {
-	r := &V1{t: t, u: u, tk: tk, j: j, l: l, v: validator.New(validator.WithRequiredStructEnabled())}
+func NewRoutes(routes map[string]server.CallHandler, n usecase.Notification, u usecase.User, tk usecase.Task, j *jwt.Manager, l logger.Interface) {
+	r := &V1{n: n, u: u, tk: tk, j: j, l: l, v: validator.New(validator.WithRequiredStructEnabled())}
 
 	routes["v1.auth.register"] = r.register()
 	routes["v1.auth.login"] = r.login()
 
-	routes["v1.translation.getHistory"] = r.getHistory()
-	routes["v1.translation.translate"] = r.translate()
+	routes["v1.notification.list"] = r.listNotifications()
+	routes["v1.notification.markRead"] = r.markNotificationRead()
 
 	routes["v1.task.create"] = r.createTask()
 	routes["v1.task.get"] = r.getTask()

@@ -17,58 +17,59 @@ import (
 	gomock "go.uber.org/mock/gomock"
 )
 
-// MockTranslation is a mock of Translation interface.
-type MockTranslation struct {
+// MockNotification is a mock of Notification interface.
+type MockNotification struct {
 	ctrl     *gomock.Controller
-	recorder *MockTranslationMockRecorder
+	recorder *MockNotificationMockRecorder
 	isgomock struct{}
 }
 
-// MockTranslationMockRecorder is the mock recorder for MockTranslation.
-type MockTranslationMockRecorder struct {
-	mock *MockTranslation
+// MockNotificationMockRecorder is the mock recorder for MockNotification.
+type MockNotificationMockRecorder struct {
+	mock *MockNotification
 }
 
-// NewMockTranslation creates a new mock instance.
-func NewMockTranslation(ctrl *gomock.Controller) *MockTranslation {
-	mock := &MockTranslation{ctrl: ctrl}
-	mock.recorder = &MockTranslationMockRecorder{mock}
+// NewMockNotification creates a new mock instance.
+func NewMockNotification(ctrl *gomock.Controller) *MockNotification {
+	mock := &MockNotification{ctrl: ctrl}
+	mock.recorder = &MockNotificationMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockTranslation) EXPECT() *MockTranslationMockRecorder {
+func (m *MockNotification) EXPECT() *MockNotificationMockRecorder {
 	return m.recorder
 }
 
-// History mocks base method.
-func (m *MockTranslation) History(ctx context.Context, userID string) (entity.TranslationHistory, error) {
+// List mocks base method.
+func (m *MockNotification) List(ctx context.Context, userID string, unreadOnly *bool, limit, offset int) ([]entity.Notification, int, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "History", ctx, userID)
-	ret0, _ := ret[0].(entity.TranslationHistory)
+	ret := m.ctrl.Call(m, "List", ctx, userID, unreadOnly, limit, offset)
+	ret0, _ := ret[0].([]entity.Notification)
+	ret1, _ := ret[1].(int)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// List indicates an expected call of List.
+func (mr *MockNotificationMockRecorder) List(ctx, userID, unreadOnly, limit, offset any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockNotification)(nil).List), ctx, userID, unreadOnly, limit, offset)
+}
+
+// MarkRead mocks base method.
+func (m *MockNotification) MarkRead(ctx context.Context, userID, notificationID string) (entity.Notification, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkRead", ctx, userID, notificationID)
+	ret0, _ := ret[0].(entity.Notification)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// History indicates an expected call of History.
-func (mr *MockTranslationMockRecorder) History(ctx, userID any) *gomock.Call {
+// MarkRead indicates an expected call of MarkRead.
+func (mr *MockNotificationMockRecorder) MarkRead(ctx, userID, notificationID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "History", reflect.TypeOf((*MockTranslation)(nil).History), ctx, userID)
-}
-
-// Translate mocks base method.
-func (m *MockTranslation) Translate(ctx context.Context, userID string, t entity.Translation) (entity.Translation, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Translate", ctx, userID, t)
-	ret0, _ := ret[0].(entity.Translation)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Translate indicates an expected call of Translate.
-func (mr *MockTranslationMockRecorder) Translate(ctx, userID, t any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Translate", reflect.TypeOf((*MockTranslation)(nil).Translate), ctx, userID, t)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkRead", reflect.TypeOf((*MockNotification)(nil).MarkRead), ctx, userID, notificationID)
 }
 
 // MockUser is a mock of User interface.

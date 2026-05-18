@@ -20,14 +20,14 @@ import (
 // Swagger spec:
 //
 //	@title       Gin Clean Template API
-//	@description Multi-domain clean architecture template with translation, user, and task management
+//	@description Multi-domain clean architecture template with notifications, user, and task management
 //	@version     1.0
 //	@host        localhost:8080
 //	@BasePath    /v1
 //	@securityDefinitions.apikey BearerAuth
 //	@in header
 //	@name Authorization
-func NewRouter(app *gin.Engine, cfg *config.Config, t usecase.Translation, u usecase.User, tk usecase.Task, jwtManager *jwt.Manager, l logger.Interface) {
+func NewRouter(app *gin.Engine, cfg *config.Config, n usecase.Notification, u usecase.User, tk usecase.Task, jwtManager *jwt.Manager, l logger.Interface) {
 	app.Use(middleware.Logger(l), middleware.Recovery(l))
 
 	if cfg.Metrics.Enabled {
@@ -43,5 +43,5 @@ func NewRouter(app *gin.Engine, cfg *config.Config, t usecase.Translation, u use
 	})
 
 	apiV1Group := app.Group("/v1")
-	v1.NewRoutes(apiV1Group, t, u, tk, jwtManager, l)
+	v1.NewRoutes(apiV1Group, n, u, tk, jwtManager, l)
 }

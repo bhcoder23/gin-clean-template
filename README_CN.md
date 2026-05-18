@@ -47,7 +47,7 @@
 
 - **用户认证** — 注册、登录、基于 JWT 的授权
 - **任务管理** — CRUD 操作，支持状态转换（todo、in_progress、done）
-- **翻译** — 文本翻译与历史记录
+- **通知中心** — 任务活动通知与已读追踪
 
 这些示例领域可以通过四种传输协议（REST、gRPC、AMQP RPC、NATS RPC）暴露，但派生项目通常应该删掉不需要的 adapter。
 
@@ -118,13 +118,11 @@ curl -s 'http://127.0.0.1:8080/v1/tasks?limit=10&offset=0' \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-可选的翻译演示：
+查看任务流转产生的未读通知：
 
 ```sh
-curl -s http://127.0.0.1:8080/v1/translation/do-translate \
-  -H 'Content-Type: application/json' \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"source":"en","destination":"zh","original":"Clean architecture keeps adapters honest"}'
+curl -s 'http://127.0.0.1:8080/v1/notifications?unread_only=true&limit=10&offset=0' \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ## 领域
@@ -162,16 +160,18 @@ CRUD 操作，支持状态状态机。
 - 支持 `limit`/`offset` 分页和可选状态过滤
 - 任务绑定到已认证的用户
 
-### 翻译
+### 通知中心
 
-通过外部 API 进行文本翻译，支持历史记录。
+任务活动通知会持久化到 PostgreSQL，并通过所有 transport 暴露出来。
 
-这个 adapter 主要用于演示如何接入外部服务。派生项目通常应该替换成自己的 provider，或者如果业务不需要翻译，就直接删掉这个领域。
+| 操作 | REST | gRPC |
+|----|------|------|
+| 列表 | `GET /v1/notifications` | `NotificationService/ListNotifications` |
+| 标记已读 | `PATCH /v1/notifications/:id/read` | `NotificationService/MarkNotificationRead` |
 
-| 操作 | REST                                | gRPC                                    |
-|----|-------------------------------------|-----------------------------------------|
-| 翻译 | `POST /v1/translation/do-translate` | `TranslationHistoryService/DoTranslate` |
-| 历史 | `GET /v1/translation/history`       | `TranslationHistoryService/ShowHistory` |
+- 任务创建和状态流转都会生成通知
+- 支持 `unread_only=true` 过滤未读通知
+- 已读通知会记录 `read_at`
 
 ## Quick start
 
@@ -222,7 +222,7 @@ make compose-up-all
   - URL: `tcp://grpc.lvh.me:8081` | `tcp://127.0.0.1:8081`
   - [v1/auth.proto](docs/proto/v1/auth.proto)
   - [v1/task.proto](docs/proto/v1/task.proto)
-  - [v1/translation.history.proto](docs/proto/v1/translation.history.proto)
+  - [v1/notification.proto](docs/proto/v1/notification.proto)
 - PostgreSQL:
   - `postgres://user:myAwEsOm3pa55@w0rd@127.0.0.1:5432/db`
 - RabbitMQ:
@@ -322,7 +322,7 @@ routes := make(map[string]server.CallHandler)
 }
 
 {
-    v2.NewTranslationRoutes(routes, t, l)
+    v2.NewNotificationRoutes(routes, n, l)
 }
 ```
 
@@ -337,13 +337,13 @@ routes := make(map[string]server.CallHandler)
 {
     v1.NewAuthRoutes(app, u, l)
     v1.NewTaskRoutes(app, tk, l)
-    v1.NewTranslationRoutes(app, t, l)
+    v1.NewNotificationRoutes(app, n, l)
 }
 
 {
     v2.NewAuthRoutes(app, u, l)
     v2.NewTaskRoutes(app, tk, l)
-    v2.NewTranslationRoutes(app, t, l)
+    v2.NewNotificationRoutes(app, n, l)
 }
 
 reflection.Register(app)
@@ -363,7 +363,7 @@ routes := make(map[string]server.CallHandler)
 }
 
 {
-    v2.NewTranslationRoutes(routes, t, l)
+    v2.NewNotificationRoutes(routes, n, l)
 }
 ```
 
@@ -376,7 +376,7 @@ routes := make(map[string]server.CallHandler)
 ```go
 apiV1Group := app.Group("/v1")
 {
-	v1.NewRoutes(apiV1Group, t, u, tk, jwtManager, l)
+	v1.NewRoutes(apiV1Group, n, u, tk, jwtManager, l)
 }
 apiV2Group := app.Group("/v2")
 {

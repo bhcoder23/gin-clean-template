@@ -10,10 +10,10 @@ import (
 //go:generate go tool mockgen -source=contracts.go -destination=./mocks_usecase_test.go -package=usecase_test
 
 type (
-	// Translation -.
-	Translation interface {
-		Translate(ctx context.Context, userID string, t entity.Translation) (entity.Translation, error)
-		History(ctx context.Context, userID string) (entity.TranslationHistory, error)
+	// Notification -.
+	Notification interface {
+		List(ctx context.Context, userID string, unreadOnly *bool, limit, offset int) ([]entity.Notification, int, error)
+		MarkRead(ctx context.Context, userID, notificationID string) (entity.Notification, error)
 	}
 
 	// User -.

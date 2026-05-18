@@ -12,12 +12,16 @@ import (
 
 // UseCase -.
 type UseCase struct {
-	repo repo.TaskRepo
+	repo             repo.TaskRepo
+	notificationRepo repo.NotificationRepo
 }
 
 // New -.
-func New(r repo.TaskRepo) *UseCase {
-	return &UseCase{repo: r}
+func New(r repo.TaskRepo, notificationRepo repo.NotificationRepo) *UseCase {
+	return &UseCase{
+		repo:             r,
+		notificationRepo: notificationRepo,
+	}
 }
 
 // Create -.
@@ -37,6 +41,17 @@ func (uc *UseCase) Create(ctx context.Context, userID, title, description string
 	err := uc.repo.Store(ctx, &task)
 	if err != nil {
 		return entity.Task{}, fmt.Errorf("TaskUseCase - Create - uc.repo.Store: %w", err)
+	}
+
+	if err = uc.storeNotification(ctx, entity.Notification{
+		UserID: userID,
+		TaskID: task.ID,
+		Type:   entity.NotificationTypeTaskCreated,
+		Title:  "Task created",
+		Body:   fmt.Sprintf("Task %q was created with status %s.", task.Title, task.Status),
+		Read:   false,
+	}); err != nil {
+		return entity.Task{}, err
 	}
 
 	return task, nil
@@ -116,6 +131,17 @@ func (uc *UseCase) Transition(ctx context.Context, userID, taskID string, newSta
 		return entity.Task{}, fmt.Errorf("TaskUseCase - Transition - uc.repo.Update: %w", err)
 	}
 
+	if err = uc.storeNotification(ctx, entity.Notification{
+		UserID: userID,
+		TaskID: task.ID,
+		Type:   entity.NotificationTypeTaskStatusChanged,
+		Title:  "Task status changed",
+		Body:   fmt.Sprintf("Task %q moved to %s.", task.Title, task.Status),
+		Read:   false,
+	}); err != nil {
+		return entity.Task{}, err
+	}
+
 	return task, nil
 }
 
@@ -124,6 +150,17 @@ func (uc *UseCase) Delete(ctx context.Context, userID, taskID string) error {
 	err := uc.repo.Delete(ctx, userID, taskID)
 	if err != nil {
 		return fmt.Errorf("TaskUseCase - Delete - uc.repo.Delete: %w", err)
+	}
+
+	return nil
+}
+
+func (uc *UseCase) storeNotification(ctx context.Context, notification entity.Notification) error {
+	notification.ID = uuid.New().String()
+	notification.CreatedAt = time.Now().UTC()
+
+	if err := uc.notificationRepo.Store(ctx, &notification); err != nil {
+		return fmt.Errorf("TaskUseCase - storeNotification - uc.notificationRepo.Store: %w", err)
 	}
 
 	return nil

@@ -2,6 +2,7 @@ package usecase_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -13,6 +14,8 @@ import (
 	"go.uber.org/mock/gomock"
 	"golang.org/x/crypto/bcrypt"
 )
+
+var errUseCaseInternal = errors.New("internal server error")
 
 func newUserUseCase(t *testing.T) (*user.UseCase, *MockUserRepo) {
 	t.Helper()
@@ -112,11 +115,11 @@ func TestLogin(t *testing.T) {
 		t.Parallel()
 
 		uc, repo := newUserUseCase(t)
-		repo.EXPECT().GetByEmail(context.Background(), "broken@example.com").Return(entity.User{}, errInternalServErr)
+		repo.EXPECT().GetByEmail(context.Background(), "broken@example.com").Return(entity.User{}, errUseCaseInternal)
 
 		token, err := uc.Login(context.Background(), "broken@example.com", "password123")
 
-		require.ErrorIs(t, err, errInternalServErr)
+		require.ErrorIs(t, err, errUseCaseInternal)
 		assert.NotErrorIs(t, err, entity.ErrInvalidCredentials)
 		assert.Empty(t, token)
 	})
@@ -160,10 +163,10 @@ func TestGetUser_GenericError(t *testing.T) {
 
 	uc, repo := newUserUseCase(t)
 
-	repo.EXPECT().GetByID(context.Background(), "user-id-123").Return(entity.User{}, errInternalServErr)
+	repo.EXPECT().GetByID(context.Background(), "user-id-123").Return(entity.User{}, errUseCaseInternal)
 
 	_, err := uc.GetUser(context.Background(), "user-id-123")
 
 	require.Error(t, err)
-	require.ErrorIs(t, err, errInternalServErr)
+	require.ErrorIs(t, err, errUseCaseInternal)
 }

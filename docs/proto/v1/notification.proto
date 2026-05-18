@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package grpc.v1;
+
+option go_package = "docs/proto/v1";
+
+service NotificationService {
+  rpc ListNotifications (ListNotificationsRequest) returns (ListNotificationsResponse);
+  rpc MarkNotificationRead (MarkNotificationReadRequest) returns (NotificationResponse);
+}
+
+message ListNotificationsRequest {
+  bool unread_only = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message MarkNotificationReadRequest {
+  string id = 1;
+}
+
+message NotificationResponse {
+  string id = 1;
+  string user_id = 2;
+  string task_id = 3;
+  string type = 4;
+  string title = 5;
+  string body = 6;
+  bool read = 7;
+  string created_at = 8;
+  string read_at = 9;
+}
+
+message ListNotificationsResponse {
+  repeated NotificationResponse notifications = 1;
+  int32 total = 2;
+}

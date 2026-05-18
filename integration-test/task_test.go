@@ -38,7 +38,7 @@ func httpCreateTask(t *testing.T, token, title, description string) taskResponse
 	ctx, cancel := context.WithTimeout(t.Context(), requestTimeout)
 	defer cancel()
 
-	resp, err := doAuthenticatedRequest(ctx, http.MethodPost, basePathV1+"/tasks/", bytes.NewBufferString(createBody), token)
+	resp, err := doAuthenticatedRequest(ctx, http.MethodPost, basePathV1+"/tasks", bytes.NewBufferString(createBody), token)
 	if err != nil {
 		t.Fatalf("Create task: %v", err)
 	}
@@ -112,7 +112,7 @@ func TestHTTPTaskListV1(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), requestTimeout)
 	defer cancel()
 
-	resp, err := doAuthenticatedRequest(ctx, http.MethodGet, basePathV1+"/tasks/?limit=10&offset=0", http.NoBody, token)
+	resp, err := doAuthenticatedRequest(ctx, http.MethodGet, basePathV1+"/tasks?limit=10&offset=0", http.NoBody, token)
 	if err != nil {
 		t.Fatalf("List tasks: %v", err)
 	}
@@ -254,7 +254,7 @@ func TestHTTPTaskErrorsV1(t *testing.T) {
 
 		body := `{"title":"unauthorized task","description":"should fail"}`
 
-		resp, err := doWebRequestWithTimeout(ctx, http.MethodPost, basePathV1+"/tasks/", bytes.NewBufferString(body))
+		resp, err := doWebRequestWithTimeout(ctx, http.MethodPost, basePathV1+"/tasks", bytes.NewBufferString(body))
 		if err != nil {
 			t.Fatalf("Failed to send request: %v", err)
 		}
@@ -292,7 +292,7 @@ func TestHTTPTaskErrorsV1(t *testing.T) {
 
 		body := `{"description":"missing title"}`
 
-		resp, err := doAuthenticatedRequest(ctx, http.MethodPost, basePathV1+"/tasks/", bytes.NewBufferString(body), token)
+		resp, err := doAuthenticatedRequest(ctx, http.MethodPost, basePathV1+"/tasks", bytes.NewBufferString(body), token)
 		if err != nil {
 			t.Fatalf("Failed to send request: %v", err)
 		}

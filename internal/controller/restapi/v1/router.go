@@ -10,8 +10,8 @@ import (
 )
 
 // NewRoutes -.
-func NewRoutes(apiV1Group *gin.RouterGroup, t usecase.Translation, u usecase.User, tk usecase.Task, jwtManager *jwt.Manager, l logger.Interface) {
-	r := &V1{t: t, u: u, tk: tk, l: l, v: validator.New(validator.WithRequiredStructEnabled())}
+func NewRoutes(apiV1Group *gin.RouterGroup, n usecase.Notification, u usecase.User, tk usecase.Task, jwtManager *jwt.Manager, l logger.Interface) {
+	r := &V1{n: n, u: u, tk: tk, l: l, v: validator.New(validator.WithRequiredStructEnabled())}
 
 	authGroup := apiV1Group.Group("/auth")
 	authGroup.POST("/register", r.register)
@@ -31,7 +31,7 @@ func NewRoutes(apiV1Group *gin.RouterGroup, t usecase.Translation, u usecase.Use
 	taskGroup.PATCH("/:id/status", r.transitionTask)
 	taskGroup.DELETE("/:id", r.deleteTask)
 
-	translationGroup := protected.Group("/translation")
-	translationGroup.GET("/history", r.history)
-	translationGroup.POST("/do-translate", r.doTranslate)
+	notificationGroup := protected.Group("/notifications")
+	notificationGroup.GET("", r.listNotifications)
+	notificationGroup.PATCH("/:id/read", r.markNotificationRead)
 }

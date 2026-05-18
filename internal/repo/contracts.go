@@ -10,15 +10,12 @@ import (
 //go:generate go tool mockgen -source=contracts.go -destination=../usecase/mocks_repo_test.go -package=usecase_test
 
 type (
-	// TranslationRepo -.
-	TranslationRepo interface {
-		Store(ctx context.Context, userID string, t entity.Translation) error
-		GetHistory(ctx context.Context, userID string) ([]entity.Translation, error)
-	}
-
-	// TranslationWebAPI -.
-	TranslationWebAPI interface {
-		Translate(ctx context.Context, t entity.Translation) (entity.Translation, error)
+	// NotificationRepo -.
+	NotificationRepo interface {
+		Store(ctx context.Context, notification *entity.Notification) error
+		GetByID(ctx context.Context, userID, notificationID string) (entity.Notification, error)
+		List(ctx context.Context, userID string, filter NotificationFilter) ([]entity.Notification, int, error)
+		Update(ctx context.Context, notification *entity.Notification) error
 	}
 
 	// UserRepo -.
@@ -42,5 +39,12 @@ type (
 		Status *entity.TaskStatus
 		Limit  uint64
 		Offset uint64
+	}
+
+	// NotificationFilter -.
+	NotificationFilter struct {
+		UnreadOnly *bool
+		Limit      uint64
+		Offset     uint64
 	}
 )

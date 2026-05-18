@@ -9,7 +9,7 @@ import (
 
 // V1 -.
 type V1 struct {
-	t  usecase.Translation
+	n  usecase.Notification
 	u  usecase.User
 	tk usecase.Task
 	j  *jwt.Manager

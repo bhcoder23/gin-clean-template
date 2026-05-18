@@ -15,15 +15,16 @@ import (
 
 var errRepoGeneric = errors.New("repository error")
 
-func newTaskUseCase(t *testing.T) (*task.UseCase, *MockTaskRepo) {
+func newTaskUseCase(t *testing.T) (*task.UseCase, *MockTaskRepo, *MockNotificationRepo) {
 	t.Helper()
 
 	ctrl := gomock.NewController(t)
 
 	mockRepo := NewMockTaskRepo(ctrl)
-	useCase := task.New(mockRepo)
+	notificationRepo := NewMockNotificationRepo(ctrl)
+	useCase := task.New(mockRepo, notificationRepo)
 
-	return useCase, mockRepo
+	return useCase, mockRepo, notificationRepo
 }
 
 func TestTaskCreate(t *testing.T) {
@@ -32,8 +33,9 @@ func TestTaskCreate(t *testing.T) {
 	t.Run("create success", func(t *testing.T) {
 		t.Parallel()
 
-		uc, mockRepo := newTaskUseCase(t)
+		uc, mockRepo, notificationRepo := newTaskUseCase(t)
 		mockRepo.EXPECT().Store(context.Background(), gomock.Any()).Return(nil)
+		notificationRepo.EXPECT().Store(context.Background(), gomock.Any()).Return(nil)
 
 		t2, err := uc.Create(context.Background(), "user-id-123", "My Task", "Task description")
 
@@ -57,7 +59,7 @@ func TestTaskGet(t *testing.T) {
 	t.Run("get success", func(t *testing.T) {
 		t.Parallel()
 
-		uc, mockRepo := newTaskUseCase(t)
+		uc, mockRepo, _ := newTaskUseCase(t)
 		mockRepo.EXPECT().GetByID(context.Background(), "user-id-123", "task-id-123").Return(expectedTask, nil)
 
 		t2, err := uc.Get(context.Background(), "user-id-123", "task-id-123")
@@ -69,7 +71,7 @@ func TestTaskGet(t *testing.T) {
 	t.Run("get not found", func(t *testing.T) {
 		t.Parallel()
 
-		uc, mockRepo := newTaskUseCase(t)
+		uc, mockRepo, _ := newTaskUseCase(t)
 		mockRepo.EXPECT().GetByID(context.Background(), "user-id-123", "missing-id").Return(entity.Task{}, entity.ErrTaskNotFound)
 
 		_, err := uc.Get(context.Background(), "user-id-123", "missing-id")
@@ -87,7 +89,7 @@ func TestTaskList(t *testing.T) {
 	t.Run("list success", func(t *testing.T) {
 		t.Parallel()
 
-		uc, mockRepo := newTaskUseCase(t)
+		uc, mockRepo, _ := newTaskUseCase(t)
 		mockRepo.EXPECT().List(context.Background(), "user-id-123", gomock.Any()).Return([]entity.Task{task1, task2}, 2, nil)
 
 		tasks, total, err := uc.List(context.Background(), "user-id-123", nil, 10, 0)
@@ -100,7 +102,7 @@ func TestTaskList(t *testing.T) {
 	t.Run("list defaults", func(t *testing.T) {
 		t.Parallel()
 
-		uc, mockRepo := newTaskUseCase(t)
+		uc, mockRepo, _ := newTaskUseCase(t)
 		mockRepo.EXPECT().List(context.Background(), "user-id-123", repo.TaskFilter{
 			Status: nil,
 			Limit:  uint64(10),
@@ -121,7 +123,7 @@ func TestTaskUpdate(t *testing.T) {
 	t.Run("update success", func(t *testing.T) {
 		t.Parallel()
 
-		uc, mockRepo := newTaskUseCase(t)
+		uc, mockRepo, _ := newTaskUseCase(t)
 
 		existingTask := entity.Task{
 			ID:     "task-id-123",
@@ -146,7 +148,7 @@ func TestTaskTransition(t *testing.T) {
 	t.Run("transition valid", func(t *testing.T) {
 		t.Parallel()
 
-		uc, mockRepo := newTaskUseCase(t)
+		uc, mockRepo, notificationRepo := newTaskUseCase(t)
 
 		todoTask := entity.Task{
 			ID:     "task-id-123",
@@ -157,6 +159,7 @@ func TestTaskTransition(t *testing.T) {
 
 		mockRepo.EXPECT().GetByID(context.Background(), "user-id-123", "task-id-123").Return(todoTask, nil)
 		mockRepo.EXPECT().Update(context.Background(), gomock.Any()).Return(nil)
+		notificationRepo.EXPECT().Store(context.Background(), gomock.Any()).Return(nil)
 
 		updated, err := uc.Transition(context.Background(), "user-id-123", "task-id-123", entity.TaskStatusInProgress)
 
@@ -167,7 +170,7 @@ func TestTaskTransition(t *testing.T) {
 	t.Run("transition invalid", func(t *testing.T) {
 		t.Parallel()
 
-		uc, mockRepo := newTaskUseCase(t)
+		uc, mockRepo, _ := newTaskUseCase(t)
 
 		doneTask := entity.Task{
 			ID:     "task-id-456",
@@ -190,7 +193,7 @@ func TestTaskDelete(t *testing.T) {
 	t.Run("delete success", func(t *testing.T) {
 		t.Parallel()
 
-		uc, mockRepo := newTaskUseCase(t)
+		uc, mockRepo, _ := newTaskUseCase(t)
 		mockRepo.EXPECT().Delete(context.Background(), "user-id-123", "task-id-123").Return(nil)
 
 		err := uc.Delete(context.Background(), "user-id-123", "task-id-123")
@@ -201,7 +204,7 @@ func TestTaskDelete(t *testing.T) {
 	t.Run("delete not found", func(t *testing.T) {
 		t.Parallel()
 
-		uc, mockRepo := newTaskUseCase(t)
+		uc, mockRepo, _ := newTaskUseCase(t)
 		mockRepo.EXPECT().Delete(context.Background(), "user-id-123", "missing-id").Return(entity.ErrTaskNotFound)
 
 		err := uc.Delete(context.Background(), "user-id-123", "missing-id")
@@ -213,7 +216,7 @@ func TestTaskDelete(t *testing.T) {
 func TestTaskCreate_RepoError(t *testing.T) {
 	t.Parallel()
 
-	uc, mockRepo := newTaskUseCase(t)
+	uc, mockRepo, _ := newTaskUseCase(t)
 
 	mockRepo.EXPECT().Store(context.Background(), gomock.Any()).Return(errRepoGeneric)
 
@@ -226,7 +229,7 @@ func TestTaskCreate_RepoError(t *testing.T) {
 func TestTaskGet_RepoError(t *testing.T) {
 	t.Parallel()
 
-	uc, mockRepo := newTaskUseCase(t)
+	uc, mockRepo, _ := newTaskUseCase(t)
 
 	mockRepo.EXPECT().GetByID(context.Background(), "user-id-123", "task-id-999").Return(entity.Task{}, errRepoGeneric)
 
@@ -239,7 +242,7 @@ func TestTaskGet_RepoError(t *testing.T) {
 func TestTaskUpdate_RepoError(t *testing.T) {
 	t.Parallel()
 
-	uc, mockRepo := newTaskUseCase(t)
+	uc, mockRepo, _ := newTaskUseCase(t)
 
 	existing := entity.Task{
 		ID:     "task-id-123",
@@ -260,7 +263,7 @@ func TestTaskUpdate_RepoError(t *testing.T) {
 func TestTaskUpdate_NotFound(t *testing.T) {
 	t.Parallel()
 
-	uc, mockRepo := newTaskUseCase(t)
+	uc, mockRepo, _ := newTaskUseCase(t)
 
 	mockRepo.EXPECT().GetByID(context.Background(), "user-id-123", "missing-id").Return(entity.Task{}, entity.ErrTaskNotFound)
 
@@ -273,7 +276,7 @@ func TestTaskUpdate_NotFound(t *testing.T) {
 func TestTaskTransition_UpdateError(t *testing.T) {
 	t.Parallel()
 
-	uc, mockRepo := newTaskUseCase(t)
+	uc, mockRepo, _ := newTaskUseCase(t)
 
 	todoTask := entity.Task{
 		ID:     "task-id-123",
@@ -294,7 +297,7 @@ func TestTaskTransition_UpdateError(t *testing.T) {
 func TestTaskDelete_GenericError(t *testing.T) {
 	t.Parallel()
 
-	uc, mockRepo := newTaskUseCase(t)
+	uc, mockRepo, _ := newTaskUseCase(t)
 
 	mockRepo.EXPECT().Delete(context.Background(), "user-id-123", "task-id-123").Return(errRepoGeneric)
 
@@ -307,7 +310,7 @@ func TestTaskDelete_GenericError(t *testing.T) {
 func TestTaskList_RepoError(t *testing.T) {
 	t.Parallel()
 
-	uc, mockRepo := newTaskUseCase(t)
+	uc, mockRepo, _ := newTaskUseCase(t)
 
 	mockRepo.EXPECT().
 		List(context.Background(), "user-id-123", repo.TaskFilter{Limit: uint64(10), Offset: uint64(0)}).
@@ -322,7 +325,7 @@ func TestTaskList_RepoError(t *testing.T) {
 func TestTaskTransition_NotFound(t *testing.T) {
 	t.Parallel()
 
-	uc, mockRepo := newTaskUseCase(t)
+	uc, mockRepo, _ := newTaskUseCase(t)
 
 	mockRepo.EXPECT().
 		GetByID(context.Background(), "user-id-123", "task-id-123").
