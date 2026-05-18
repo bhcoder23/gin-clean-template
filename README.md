@@ -44,6 +44,8 @@ This template is one application process with multiple optional transport adapte
 
 The default local developer path enables REST only. gRPC, AMQP RPC, and NATS RPC remain available as opt-in examples when a derived project actually needs them.
 
+For most derived projects, the right first cleanup is to delete the transport adapters you do not plan to support, along with their env vars and compose dependencies.
+
 The template includes three domains to demonstrate multi-service architecture.
 They are sample domains for the scaffold, not required product boundaries:
 
