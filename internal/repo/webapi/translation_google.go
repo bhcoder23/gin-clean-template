@@ -8,12 +8,14 @@ import (
 	"github.com/bhcoder23/gin-clean-template/internal/entity"
 )
 
-// TranslationWebAPI -.
+// TranslationWebAPI is a demo adapter used to illustrate outbound integrations.
+// Derived projects should treat it as a replaceable example rather than a
+// production-ready translation provider.
 type TranslationWebAPI struct {
 	conf translator.Config
 }
 
-// New -.
+// New builds the demo translation adapter.
 func New() *TranslationWebAPI {
 	conf := translator.Config{
 		UserAgent:   []string{"Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:15.0) Gecko/20100101 Firefox/15.0.1"},

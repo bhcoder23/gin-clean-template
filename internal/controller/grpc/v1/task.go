@@ -44,10 +44,6 @@ func (c *TaskController) GetTask(ctx context.Context, req *v1.GetTaskRequest) (*
 			return nil, status.Error(codes.NotFound, "task not found")
 		}
 
-		if errors.Is(err, entity.ErrTaskForbidden) {
-			return nil, status.Error(codes.PermissionDenied, "forbidden")
-		}
-
 		return nil, status.Error(codes.Internal, "internal server error")
 	}
 
@@ -97,10 +93,6 @@ func (c *TaskController) UpdateTask(ctx context.Context, req *v1.UpdateTaskReque
 			return nil, status.Error(codes.NotFound, "task not found")
 		}
 
-		if errors.Is(err, entity.ErrTaskForbidden) {
-			return nil, status.Error(codes.PermissionDenied, "forbidden")
-		}
-
 		return nil, status.Error(codes.Internal, "internal server error")
 	}
 
@@ -120,10 +112,6 @@ func (c *TaskController) TransitionTask(ctx context.Context, req *v1.TransitionT
 
 		if errors.Is(err, entity.ErrTaskNotFound) {
 			return nil, status.Error(codes.NotFound, "task not found")
-		}
-
-		if errors.Is(err, entity.ErrTaskForbidden) {
-			return nil, status.Error(codes.PermissionDenied, "forbidden")
 		}
 
 		if errors.Is(err, entity.ErrInvalidTransition) {

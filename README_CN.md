@@ -100,6 +100,8 @@ CRUD 操作，支持状态状态机。
 
 通过外部 API 进行文本翻译，支持历史记录。
 
+这个 adapter 主要用于演示如何接入外部服务。派生项目通常应该替换成自己的 provider，或者如果业务不需要翻译，就直接删掉这个领域。
+
 | 操作 | REST                                | gRPC                                    |
 |----|-------------------------------------|-----------------------------------------|
 | 翻译 | `POST /v1/translation/do-translate` | `TranslationHistoryService/DoTranslate` |

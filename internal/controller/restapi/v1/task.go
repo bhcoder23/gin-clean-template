@@ -95,12 +95,16 @@ func (r *V1) listTasks(ctx *gin.Context) {
 
 	limit, err := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
 	if err != nil {
-		limit = 10
+		errorResponse(ctx, http.StatusBadRequest, "invalid limit")
+
+		return
 	}
 
 	offset, err := strconv.Atoi(ctx.DefaultQuery("offset", "0"))
 	if err != nil {
-		offset = 0
+		errorResponse(ctx, http.StatusBadRequest, "invalid offset")
+
+		return
 	}
 
 	tasks, total, err := r.tk.List(ctx.Request.Context(), userID, status, limit, offset)
@@ -125,7 +129,6 @@ func (r *V1) listTasks(ctx *gin.Context) {
 // @Param       id  path     string true "Task ID"
 // @Success     200 {object} entity.Task
 // @Failure     401 {object} response.Error
-// @Failure     403 {object} response.Error
 // @Failure     404 {object} response.Error
 // @Failure     500 {object} response.Error
 // @Security    BearerAuth
@@ -144,12 +147,6 @@ func (r *V1) getTask(ctx *gin.Context) {
 
 		if errors.Is(err, entity.ErrTaskNotFound) {
 			errorResponse(ctx, http.StatusNotFound, "task not found")
-
-			return
-		}
-
-		if errors.Is(err, entity.ErrTaskForbidden) {
-			errorResponse(ctx, http.StatusForbidden, "forbidden")
 
 			return
 		}
@@ -173,7 +170,6 @@ func (r *V1) getTask(ctx *gin.Context) {
 // @Success     200     {object} entity.Task
 // @Failure     400     {object} response.Error
 // @Failure     401     {object} response.Error
-// @Failure     403     {object} response.Error
 // @Failure     404     {object} response.Error
 // @Failure     500     {object} response.Error
 // @Security    BearerAuth
@@ -212,12 +208,6 @@ func (r *V1) updateTask(ctx *gin.Context) {
 			return
 		}
 
-		if errors.Is(err, entity.ErrTaskForbidden) {
-			errorResponse(ctx, http.StatusForbidden, "forbidden")
-
-			return
-		}
-
 		errorResponse(ctx, http.StatusInternalServerError, "internal server error")
 
 		return
@@ -237,7 +227,6 @@ func (r *V1) updateTask(ctx *gin.Context) {
 // @Success     200     {object} entity.Task
 // @Failure     400     {object} response.Error
 // @Failure     401     {object} response.Error
-// @Failure     403     {object} response.Error
 // @Failure     404     {object} response.Error
 // @Failure     500     {object} response.Error
 // @Security    BearerAuth
@@ -272,12 +261,6 @@ func (r *V1) transitionTask(ctx *gin.Context) {
 
 		if errors.Is(err, entity.ErrTaskNotFound) {
 			errorResponse(ctx, http.StatusNotFound, "task not found")
-
-			return
-		}
-
-		if errors.Is(err, entity.ErrTaskForbidden) {
-			errorResponse(ctx, http.StatusForbidden, "forbidden")
 
 			return
 		}

@@ -102,6 +102,8 @@ CRUD operations with a status state machine.
 
 Text translation via external API with history tracking.
 
+This adapter is intentionally demonstrative. Derived projects should replace it with their own provider or remove the domain entirely if translation is not part of the product.
+
 | Operation | REST                                | gRPC                                    |
 |-----------|-------------------------------------|-----------------------------------------|
 | Translate | `POST /v1/translation/do-translate` | `TranslationHistoryService/DoTranslate` |

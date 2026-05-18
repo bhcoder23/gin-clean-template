@@ -223,17 +223,17 @@ func TestTaskCreate_RepoError(t *testing.T) {
 	require.ErrorIs(t, err, errRepoGeneric)
 }
 
-func TestTaskGet_Forbidden(t *testing.T) {
+func TestTaskGet_RepoError(t *testing.T) {
 	t.Parallel()
 
 	uc, mockRepo := newTaskUseCase(t)
 
-	mockRepo.EXPECT().GetByID(context.Background(), "user-id-123", "task-id-999").Return(entity.Task{}, entity.ErrTaskForbidden)
+	mockRepo.EXPECT().GetByID(context.Background(), "user-id-123", "task-id-999").Return(entity.Task{}, errRepoGeneric)
 
 	_, err := uc.Get(context.Background(), "user-id-123", "task-id-999")
 
 	require.Error(t, err)
-	require.ErrorIs(t, err, entity.ErrTaskForbidden)
+	require.ErrorIs(t, err, errRepoGeneric)
 }
 
 func TestTaskUpdate_RepoError(t *testing.T) {
