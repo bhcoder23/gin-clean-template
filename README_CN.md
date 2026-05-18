@@ -1,6 +1,6 @@
-![Gin Clean Template](docs/img/logo.svg)
-
 # Gin 整洁模板
+
+[🇺🇸 English](README.md)
 
 通用的 Go 后端整洁架构模板，由 `bhcoder23` 维护。
 

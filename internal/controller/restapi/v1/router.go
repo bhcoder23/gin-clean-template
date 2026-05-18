@@ -24,8 +24,8 @@ func NewRoutes(apiV1Group *gin.RouterGroup, t usecase.Translation, u usecase.Use
 	userGroup.GET("/profile", r.profile)
 
 	taskGroup := protected.Group("/tasks")
-	taskGroup.POST("/", r.createTask)
-	taskGroup.GET("/", r.listTasks)
+	taskGroup.POST("", r.createTask)
+	taskGroup.GET("", r.listTasks)
 	taskGroup.GET("/:id", r.getTask)
 	taskGroup.PUT("/:id", r.updateTask)
 	taskGroup.PATCH("/:id/status", r.transitionTask)

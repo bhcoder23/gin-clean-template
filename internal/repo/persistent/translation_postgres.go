@@ -6,6 +6,7 @@ import (
 
 	"github.com/bhcoder23/gin-clean-template/internal/entity"
 	"github.com/bhcoder23/gin-clean-template/pkg/postgres"
+	"github.com/jackc/pgx/v5"
 )
 
 const _defaultEntityCap = 64
@@ -13,6 +14,27 @@ const _defaultEntityCap = 64
 // TranslationRepo -.
 type TranslationRepo struct {
 	*postgres.Postgres
+}
+
+func collectTranslationRows(rows pgx.Rows) ([]entity.Translation, error) {
+	entities := make([]entity.Translation, 0, _defaultEntityCap)
+
+	for rows.Next() {
+		e := entity.Translation{}
+
+		err := rows.Scan(&e.Source, &e.Destination, &e.Original, &e.Translation)
+		if err != nil {
+			return nil, fmt.Errorf("collectTranslationRows - rows.Scan: %w", err)
+		}
+
+		entities = append(entities, e)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("collectTranslationRows - rows.Err: %w", err)
+	}
+
+	return entities, nil
 }
 
 // NewTranslationRepo -.
@@ -37,17 +59,9 @@ func (r *TranslationRepo) GetHistory(ctx context.Context, userID string) ([]enti
 	}
 	defer rows.Close()
 
-	entities := make([]entity.Translation, 0, _defaultEntityCap)
-
-	for rows.Next() {
-		e := entity.Translation{}
-
-		err = rows.Scan(&e.Source, &e.Destination, &e.Original, &e.Translation)
-		if err != nil {
-			return nil, fmt.Errorf("TranslationRepo - GetHistory - rows.Scan: %w", err)
-		}
-
-		entities = append(entities, e)
+	entities, err := collectTranslationRows(rows)
+	if err != nil {
+		return nil, fmt.Errorf("TranslationRepo - GetHistory - collectTranslationRows: %w", err)
 	}
 
 	return entities, nil

@@ -17,6 +17,27 @@ type TaskRepo struct {
 	*postgres.Postgres
 }
 
+func collectTaskRows(rows pgx.Rows, limit uint64) ([]entity.Task, error) {
+	tasks := make([]entity.Task, 0, limit)
+
+	for rows.Next() {
+		var t entity.Task
+
+		err := rows.Scan(&t.ID, &t.UserID, &t.Title, &t.Description, &t.Status, &t.CreatedAt, &t.UpdatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("collectTaskRows - rows.Scan: %w", err)
+		}
+
+		tasks = append(tasks, t)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("collectTaskRows - rows.Err: %w", err)
+	}
+
+	return tasks, nil
+}
+
 // NewTaskRepo -.
 func NewTaskRepo(pg *postgres.Postgres) *TaskRepo {
 	return &TaskRepo{pg}
@@ -117,17 +138,9 @@ func (r *TaskRepo) List(ctx context.Context, userID string, filter repo.TaskFilt
 	}
 	defer rows.Close()
 
-	tasks := make([]entity.Task, 0, filter.Limit)
-
-	for rows.Next() {
-		var t entity.Task
-
-		err = rows.Scan(&t.ID, &t.UserID, &t.Title, &t.Description, &t.Status, &t.CreatedAt, &t.UpdatedAt)
-		if err != nil {
-			return nil, 0, fmt.Errorf("TaskRepo - List - rows.Scan: %w", err)
-		}
-
-		tasks = append(tasks, t)
+	tasks, err := collectTaskRows(rows, filter.Limit)
+	if err != nil {
+		return nil, 0, fmt.Errorf("TaskRepo - List - collectTaskRows: %w", err)
 	}
 
 	return tasks, total, nil

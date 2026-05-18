@@ -107,6 +107,19 @@ func TestLogin(t *testing.T) {
 		require.ErrorIs(t, err, entity.ErrInvalidCredentials)
 		assert.Empty(t, token)
 	})
+
+	t.Run("login repo generic error", func(t *testing.T) {
+		t.Parallel()
+
+		uc, repo := newUserUseCase(t)
+		repo.EXPECT().GetByEmail(context.Background(), "broken@example.com").Return(entity.User{}, errInternalServErr)
+
+		token, err := uc.Login(context.Background(), "broken@example.com", "password123")
+
+		require.ErrorIs(t, err, errInternalServErr)
+		assert.NotErrorIs(t, err, entity.ErrInvalidCredentials)
+		assert.Empty(t, token)
+	})
 }
 
 func TestGetUser(t *testing.T) {

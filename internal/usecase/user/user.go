@@ -2,6 +2,7 @@ package user
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -56,7 +57,11 @@ func (uc *UseCase) Register(ctx context.Context, username, email, password strin
 func (uc *UseCase) Login(ctx context.Context, email, password string) (string, error) {
 	user, err := uc.repo.GetByEmail(ctx, email)
 	if err != nil {
-		return "", entity.ErrInvalidCredentials
+		if errors.Is(err, entity.ErrUserNotFound) {
+			return "", entity.ErrInvalidCredentials
+		}
+
+		return "", fmt.Errorf("UserUseCase - Login - uc.repo.GetByEmail: %w", err)
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))

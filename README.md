@@ -1,9 +1,6 @@
-![Gin Clean Template](docs/img/logo.svg)
-
 # Gin Clean Template
 
 [🇨🇳 中文](README_CN.md)
-[🇷🇺 RU](README_RU.md)
 
 General-purpose Clean Architecture template for Go backends, maintained by `bhcoder23`.
 
