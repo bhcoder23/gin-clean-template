@@ -33,7 +33,7 @@ This repository is the Gin-based backend scaffold maintained by `bhcoder23`.
 Inspired by the original MIT-licensed project:
 - [evrone/go-clean-template](https://github.com/evrone/go-clean-template)
 
-This template implements four types of servers:
+This template is one application process with multiple optional transport adapters:
 
 - AMQP RPC (based on RabbitMQ as [transport](https://github.com/rabbitmq/amqp091-go)
   and [Request-Reply pattern](https://www.enterpriseintegrationpatterns.com/patterns/messaging/RequestReply.html))
@@ -42,6 +42,8 @@ This template implements four types of servers:
 - gRPC ([gRPC](https://grpc.io/) framework based on protobuf)
 - REST API ([Gin](https://github.com/gin-gonic/gin) framework)
 
+The default local developer path enables REST only. gRPC, AMQP RPC, and NATS RPC remain available as opt-in examples when a derived project actually needs them.
+
 The template includes three domains to demonstrate multi-service architecture.
 They are sample domains for the scaffold, not required product boundaries:
 
@@ -49,7 +51,7 @@ They are sample domains for the scaffold, not required product boundaries:
 - **Task Management** — CRUD operations with status transitions (todo, in_progress, done)
 - **Translation** — text translation with history tracking
 
-All domains are available across all four transports (REST, gRPC, AMQP RPC, NATS RPC).
+The demo domains can be exposed through all four transports (REST, gRPC, AMQP RPC, NATS RPC), but derived projects are expected to keep only the adapters they need.
 
 ## Content
 
@@ -61,7 +63,7 @@ All domains are available across all four transports (REST, gRPC, AMQP RPC, NATS
 
 ## Domains
 
-The template includes three fully implemented domains, each available across all four transports (REST, gRPC, AMQP RPC, NATS RPC).
+The template includes three fully implemented domains, each demonstrated across the available transport adapters.
 
 ### User Authentication
 
@@ -107,13 +109,19 @@ Text translation via external API with history tracking.
 
 ### Local development
 
-Docker is optional. If Postgres, RabbitMQ, and NATS already run elsewhere, point the env vars to those services and use `make run`.
+Docker is optional. The default local path only needs PostgreSQL because `.env.example` enables HTTP and disables the other transports.
 
 ```sh
-# Postgres, RabbitMQ, NATS
+# PostgreSQL for default HTTP development
 make compose-up
 # Run app with migrations
 make run
+```
+
+To run every demo transport locally, either update `.env` or use:
+
+```sh
+HTTP_ENABLED=true GRPC_ENABLED=true RMQ_ENABLED=true NATS_ENABLED=true make run-all-transports
 ```
 
 ### Integration tests (can be run in CI)
@@ -126,10 +134,10 @@ make compose-up-integration-test
 ### Full docker stack with reverse proxy
 
 ```sh
-make compose-up-all 
+make compose-up-all
 ```
 
-Check services:
+Check services in the full demo stack:
 
 - AMQP RPC:
   - URL: `amqp://guest:guest@127.0.0.1:5672/`
@@ -174,6 +182,13 @@ Config: [config.go](config/config.go)
 
 Example: [.env.example](.env.example)
 
+Default local transport flags:
+
+- `HTTP_ENABLED=true`
+- `GRPC_ENABLED=false`
+- `RMQ_ENABLED=false`
+- `NATS_ENABLED=false`
+
 [docker-compose.yml](docker-compose.yml) uses `env` variables to configure services.
 
 ### `docs`
@@ -216,7 +231,7 @@ go run -tags migrate ./cmd/app
 
 ### `internal/controller`
 
-Server handler layer (MVC controllers). The template shows 4 servers:
+Server handler layer (MVC controllers). The template includes 4 optional transports:
 
 - AMQP RPC (based on RabbitMQ as transport)
 - NATS RPC (based on NATS as transport)

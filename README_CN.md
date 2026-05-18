@@ -33,12 +33,14 @@
 参考的原始项目（MIT 协议）：
 - [evrone/go-clean-template](https://github.com/evrone/go-clean-template)
 
-此模板实现了四种类型的服务器：
+此模板是一个应用进程，外挂多种可选传输适配器：
 
 - AMQP RPC（基于 RabbitMQ 作为传输）
 - NATS RPC（基于 NATS 作为传输）
 - gRPC（基于 protobuf 的 [gRPC](https://grpc.io/) 框架）
 - REST API（基于 [Gin](https://github.com/gin-gonic/gin) 框架）
+
+默认本地开发路径只开启 REST。gRPC、AMQP RPC、NATS RPC 保留为按需启用的示例适配器，派生项目通常只保留自己真正需要的部分。
 
 模板包含三个领域，用于演示多服务架构。
 它们是脚手架示例领域，并不是必须保留的产品边界：
@@ -47,7 +49,7 @@
 - **任务管理** — CRUD 操作，支持状态转换（todo、in_progress、done）
 - **翻译** — 文本翻译与历史记录
 
-所有领域在四种传输协议（REST、gRPC、AMQP RPC、NATS RPC）上均可用。
+这些示例领域可以通过四种传输协议（REST、gRPC、AMQP RPC、NATS RPC）暴露，但派生项目通常应该删掉不需要的 adapter。
 
 ## 内容
 
@@ -59,7 +61,7 @@
 
 ## 领域
 
-模板包含三个完整实现的领域，每个领域均可通过所有四种传输协议（REST、gRPC、AMQP RPC、NATS RPC）访问。
+模板包含三个完整实现的领域，并分别演示如何挂接到这些传输适配器上。
 
 ### 用户认证
 
@@ -105,13 +107,19 @@ CRUD 操作，支持状态状态机。
 
 ### Local development
 
-Docker 不是必选项。如果你的 Postgres、RabbitMQ、NATS 已经在别处运行，只需要调整环境变量，然后执行 `make run`。
+Docker 不是必选项。默认本地路径只需要 PostgreSQL，因为 `.env.example` 默认开启 HTTP、关闭其他 transport。
 
 ```sh
-# Postgres, RabbitMQ, NATS
+# 默认 HTTP 开发只需要 PostgreSQL
 make compose-up
 # Run app with migrations
 make run
+```
+
+如果你想在本地把所有演示 transport 都跑起来，可以修改 `.env`，或者直接执行：
+
+```sh
+make run-all-transports
 ```
 
 ### Integration tests (can be run in CI)
@@ -124,10 +132,10 @@ make compose-up-integration-test
 ### Full docker stack with reverse proxy
 
 ```sh
-make compose-up-all 
+make compose-up-all
 ```
 
-Check services:
+完整演示栈中的服务：
 
 - AMQP RPC:
   - URL: `amqp://guest:guest@127.0.0.1:5672/`
@@ -170,6 +178,13 @@ Check services:
 
 例如：[.env.example](.env.example)
 
+默认本地 transport 开关：
+
+- `HTTP_ENABLED=true`
+- `GRPC_ENABLED=false`
+- `RMQ_ENABLED=false`
+- `NATS_ENABLED=false`
+
 [docker-compose.yml](docker-compose.yml) 使用 `env` 變數來配置服務。
 
 ### `docs`
@@ -210,7 +225,7 @@ go run -tags migrate ./cmd/app
 
 ### `internal/controller`
 
-服务器处理层（MVC 控制器）。模板展示了 4 种服务器：
+服务器处理层（MVC 控制器）。模板包含 4 种可选 transport：
 
 - AMQP RPC（基于 RabbitMQ 作为传输）
 - NATS RPC（基于 NATS 作为传输）

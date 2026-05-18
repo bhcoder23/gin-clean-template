@@ -19,8 +19,8 @@ ALL_STACK = $(INTEGRATION_TEST_STACK)
 help: ## Display this help screen
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
-compose-up: ### Run docker compose (without backend and reverse proxy)
-	$(BASE_STACK) up --build -d db rabbitmq nats && docker compose logs -f
+compose-up: ### Run local dependencies for default HTTP development
+	$(BASE_STACK) up --build -d db && docker compose logs -f db
 .PHONY: compose-up
 
 compose-up-all: ### Run docker compose (with backend and reverse proxy)
@@ -35,6 +35,15 @@ compose-up-integration-test: ### Run docker compose with integration test
 compose-down: ### Down docker compose
 	$(ALL_STACK) down --remove-orphans
 .PHONY: compose-down
+
+generate: ### regenerate Swagger and protobuf artifacts
+	go tool swag init --parseDependency -g internal/controller/restapi/router.go
+	protoc --go_out=. \
+		--go_opt=paths=source_relative \
+		--go-grpc_out=. \
+		--go-grpc_opt=paths=source_relative \
+		docs/proto/v1/*.proto
+.PHONY: generate
 
 swag-v1: ### swag init
 	go tool swag init --parseDependency -g internal/controller/restapi/router.go
@@ -66,10 +75,13 @@ format: ### Run code formatter
 	go tool gci write . --skip-generated -s standard -s default
 .PHONY: format
 
-run: deps swag-v1 proto-v1 ### swag run for API v1
-	go mod download && \
+run: ### run the app with current env settings
 	CGO_ENABLED=0 go run -tags migrate ./cmd/app
 .PHONY: run
+
+run-all-transports: ### run the app with all demo transports enabled
+	HTTP_ENABLED=true GRPC_ENABLED=true RMQ_ENABLED=true NATS_ENABLED=true CGO_ENABLED=0 go run -tags migrate ./cmd/app
+.PHONY: run-all-transports
 
 docker-rm-volume: ### remove docker volume
 	docker volume rm $${COMPOSE_PROJECT_NAME:-gin-clean-template}_db_data

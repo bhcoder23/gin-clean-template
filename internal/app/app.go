@@ -41,6 +41,26 @@ type servers struct {
 	http *httpserver.Server
 }
 
+type transportSet struct {
+	http bool
+	grpc bool
+	rmq  bool
+	nats bool
+}
+
+func enabledTransports(cfg *config.Config) transportSet {
+	return transportSet{
+		http: cfg.HTTP.Enabled,
+		grpc: cfg.GRPC.Enabled,
+		rmq:  cfg.RMQ.Enabled,
+		nats: cfg.NATS.Enabled,
+	}
+}
+
+func (t transportSet) any() bool {
+	return t.http || t.grpc || t.rmq || t.nats
+}
+
 func initUseCases(pg *postgres.Postgres, jwtManager *jwt.Manager) useCases {
 	userRepo := persistent.NewUserRepo(pg)
 	taskRepo := persistent.NewTaskRepo(pg)
@@ -54,46 +74,103 @@ func initUseCases(pg *postgres.Postgres, jwtManager *jwt.Manager) useCases {
 }
 
 func initServers(cfg *config.Config, uc useCases, jwtManager *jwt.Manager, l logger.Interface) servers {
-	// RabbitMQ RPC Server
-	rmqRouter := amqprpc.NewRouter(uc.translation, uc.user, uc.task, jwtManager, l)
-
-	rmqServer, err := rmqRPCServer.New(cfg.RMQ.URL, cfg.RMQ.ServerExchange, rmqRouter, l)
-	if err != nil {
-		l.Fatal(fmt.Errorf("app - Run - rmqServer - server.New: %w", err))
+	enabled := enabledTransports(cfg)
+	if !enabled.any() {
+		l.Fatal("app - Run - initServers: at least one transport must be enabled")
 	}
 
-	// NATS RPC Server
-	natsRouter := natsrpc.NewRouter(uc.translation, uc.user, uc.task, jwtManager, l)
+	var s servers
 
-	natsServer, err := natsRPCServer.New(cfg.NATS.URL, cfg.NATS.ServerExchange, natsRouter, l)
-	if err != nil {
-		l.Fatal(fmt.Errorf("app - Run - natsServer - server.New: %w", err))
+	if enabled.rmq {
+		rmqRouter := amqprpc.NewRouter(uc.translation, uc.user, uc.task, jwtManager, l)
+
+		rmqServer, err := rmqRPCServer.New(cfg.RMQ.URL, cfg.RMQ.ServerExchange, rmqRouter, l)
+		if err != nil {
+			l.Fatal(fmt.Errorf("app - Run - rmqServer - server.New: %w", err))
+		}
+
+		s.rmq = rmqServer
 	}
 
-	// gRPC Server
-	grpcServer := grpcserver.New(l,
-		grpcserver.Port(cfg.GRPC.Port),
-		grpcserver.ServerOptions(pbgrpc.UnaryInterceptor(grpcmw.AuthInterceptor(jwtManager))),
-	)
-	grpc.NewRouter(grpcServer.App, uc.translation, uc.user, uc.task, l)
+	if enabled.nats {
+		natsRouter := natsrpc.NewRouter(uc.translation, uc.user, uc.task, jwtManager, l)
 
-	// HTTP Server
-	httpServer := httpserver.New(l, httpserver.Port(cfg.HTTP.Port))
-	restapi.NewRouter(httpServer.App, cfg, uc.translation, uc.user, uc.task, jwtManager, l)
+		natsServer, err := natsRPCServer.New(cfg.NATS.URL, cfg.NATS.ServerExchange, natsRouter, l)
+		if err != nil {
+			l.Fatal(fmt.Errorf("app - Run - natsServer - server.New: %w", err))
+		}
 
-	return servers{
-		rmq:  rmqServer,
-		nats: natsServer,
-		grpc: grpcServer,
-		http: httpServer,
+		s.nats = natsServer
 	}
+
+	if enabled.grpc {
+		grpcServer := grpcserver.New(l,
+			grpcserver.Port(cfg.GRPC.Port),
+			grpcserver.ServerOptions(pbgrpc.UnaryInterceptor(grpcmw.AuthInterceptor(jwtManager))),
+		)
+		grpc.NewRouter(grpcServer.App, uc.translation, uc.user, uc.task, l)
+
+		s.grpc = grpcServer
+	}
+
+	if enabled.http {
+		httpServer := httpserver.New(l, httpserver.Port(cfg.HTTP.Port))
+		restapi.NewRouter(httpServer.App, cfg, uc.translation, uc.user, uc.task, jwtManager, l)
+
+		s.http = httpServer
+	}
+
+	return s
 }
 
 func (s *servers) startServers() {
-	s.rmq.Start()
-	s.nats.Start()
-	s.grpc.Start()
-	s.http.Start()
+	if s.rmq != nil {
+		s.rmq.Start()
+	}
+
+	if s.nats != nil {
+		s.nats.Start()
+	}
+
+	if s.grpc != nil {
+		s.grpc.Start()
+	}
+
+	if s.http != nil {
+		s.http.Start()
+	}
+}
+
+func (s *servers) httpNotify() <-chan error {
+	if s.http == nil {
+		return nil
+	}
+
+	return s.http.Notify()
+}
+
+func (s *servers) grpcNotify() <-chan error {
+	if s.grpc == nil {
+		return nil
+	}
+
+	return s.grpc.Notify()
+}
+
+func (s *servers) rmqNotify() <-chan error {
+	if s.rmq == nil {
+		return nil
+	}
+
+	return s.rmq.Notify()
+}
+
+func (s *servers) natsNotify() <-chan error {
+	if s.nats == nil {
+		return nil
+	}
+
+	return s.nats.Notify()
 }
 
 func (s *servers) waitForShutdown(l logger.Interface) {
@@ -105,13 +182,13 @@ func (s *servers) waitForShutdown(l logger.Interface) {
 	select {
 	case sig := <-interrupt:
 		l.Info("app - Run - signal: %s", sig.String())
-	case err = <-s.http.Notify():
+	case err = <-s.httpNotify():
 		l.Error(fmt.Errorf("app - Run - httpServer.Notify: %w", err))
-	case err = <-s.grpc.Notify():
+	case err = <-s.grpcNotify():
 		l.Error(fmt.Errorf("app - Run - grpcServer.Notify: %w", err))
-	case err = <-s.rmq.Notify():
+	case err = <-s.rmqNotify():
 		l.Error(fmt.Errorf("app - Run - rmqServer.Notify: %w", err))
-	case err = <-s.nats.Notify():
+	case err = <-s.natsNotify():
 		l.Error(fmt.Errorf("app - Run - natsServer.Notify: %w", err))
 	}
 
@@ -119,20 +196,28 @@ func (s *servers) waitForShutdown(l logger.Interface) {
 }
 
 func (s *servers) shutdownServers(l logger.Interface) {
-	if err := s.http.Shutdown(); err != nil {
-		l.Error(fmt.Errorf("app - Run - httpServer.Shutdown: %w", err))
+	if s.http != nil {
+		if err := s.http.Shutdown(); err != nil {
+			l.Error(fmt.Errorf("app - Run - httpServer.Shutdown: %w", err))
+		}
 	}
 
-	if err := s.grpc.Shutdown(); err != nil {
-		l.Error(fmt.Errorf("app - Run - grpcServer.Shutdown: %w", err))
+	if s.grpc != nil {
+		if err := s.grpc.Shutdown(); err != nil {
+			l.Error(fmt.Errorf("app - Run - grpcServer.Shutdown: %w", err))
+		}
 	}
 
-	if err := s.rmq.Shutdown(); err != nil {
-		l.Error(fmt.Errorf("app - Run - rmqServer.Shutdown: %w", err))
+	if s.rmq != nil {
+		if err := s.rmq.Shutdown(); err != nil {
+			l.Error(fmt.Errorf("app - Run - rmqServer.Shutdown: %w", err))
+		}
 	}
 
-	if err := s.nats.Shutdown(); err != nil {
-		l.Error(fmt.Errorf("app - Run - natsServer.Shutdown: %w", err))
+	if s.nats != nil {
+		if err := s.nats.Shutdown(); err != nil {
+			l.Error(fmt.Errorf("app - Run - natsServer.Shutdown: %w", err))
+		}
 	}
 }
 

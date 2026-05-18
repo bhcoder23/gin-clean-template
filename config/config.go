@@ -30,7 +30,8 @@ type (
 
 	// HTTP -.
 	HTTP struct {
-		Port string `env:"HTTP_PORT,required"`
+		Enabled bool   `env:"HTTP_ENABLED" envDefault:"true"`
+		Port    string `env:"HTTP_PORT"    envDefault:"8080"`
 	}
 
 	// Log -.
@@ -46,20 +47,23 @@ type (
 
 	// GRPC -.
 	GRPC struct {
-		Port string `env:"GRPC_PORT,required"`
+		Enabled bool   `env:"GRPC_ENABLED" envDefault:"false"`
+		Port    string `env:"GRPC_PORT"    envDefault:"8081"`
 	}
 
 	// RMQ -.
 	RMQ struct {
-		ServerExchange string `env:"RMQ_RPC_SERVER,required"`
-		ClientExchange string `env:"RMQ_RPC_CLIENT,required"`
-		URL            string `env:"RMQ_URL,required"`
+		Enabled        bool   `env:"RMQ_ENABLED"    envDefault:"false"`
+		ServerExchange string `env:"RMQ_RPC_SERVER" envDefault:"rpc_server"`
+		ClientExchange string `env:"RMQ_RPC_CLIENT" envDefault:"rpc_client"`
+		URL            string `env:"RMQ_URL"        envDefault:"amqp://guest:guest@localhost:5672/"`
 	}
 
 	// NATS -.
 	NATS struct {
-		ServerExchange string `env:"NATS_RPC_SERVER,required"`
-		URL            string `env:"NATS_URL,required"`
+		Enabled        bool   `env:"NATS_ENABLED"    envDefault:"false"`
+		ServerExchange string `env:"NATS_RPC_SERVER" envDefault:"rpc_server"`
+		URL            string `env:"NATS_URL"        envDefault:"nats://guest:guest@localhost:4222/"`
 	}
 
 	// JWT -.
