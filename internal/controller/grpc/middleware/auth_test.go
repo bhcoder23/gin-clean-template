@@ -118,7 +118,7 @@ func TestAuthInterceptor_InvalidToken(t *testing.T) {
 	interceptor := grpcmw.AuthInterceptor(jwtMgr)
 	info := &grpc.UnaryServerInfo{FullMethod: "/grpc.v1.TaskService/GetTask"}
 
-	md := metadata.Pairs("authorization", "invalid-token")
+	md := metadata.Pairs("authorization", "Bearer invalid-token")
 	ctx := metadata.NewIncomingContext(t.Context(), md)
 
 	capture := &ctxCapture{}
@@ -134,6 +134,29 @@ func TestAuthInterceptor_InvalidToken(t *testing.T) {
 	assert.Contains(t, st.Message(), "invalid or expired token")
 }
 
+func TestAuthInterceptor_InvalidAuthorizationFormat(t *testing.T) {
+	t.Parallel()
+
+	jwtMgr := newJWTManager(t)
+	interceptor := grpcmw.AuthInterceptor(jwtMgr)
+	info := &grpc.UnaryServerInfo{FullMethod: "/grpc.v1.TaskService/GetTask"}
+
+	md := metadata.Pairs("authorization", "invalid-token")
+	ctx := metadata.NewIncomingContext(t.Context(), md)
+
+	capture := &ctxCapture{}
+
+	resp, err := interceptor(ctx, nil, info, capture.handler)
+
+	assert.Nil(t, resp)
+	require.Error(t, err)
+
+	st, ok := status.FromError(err)
+	require.True(t, ok)
+	assert.Equal(t, codes.Unauthenticated, st.Code())
+	assert.Contains(t, st.Message(), "invalid authorization header format")
+}
+
 func TestAuthInterceptor_ValidToken(t *testing.T) {
 	t.Parallel()
 
@@ -144,7 +167,7 @@ func TestAuthInterceptor_ValidToken(t *testing.T) {
 	token, err := jwtMgr.GenerateToken("user-id-123")
 	require.NoError(t, err)
 
-	md := metadata.Pairs("authorization", token)
+	md := metadata.Pairs("authorization", "Bearer "+token)
 	ctx := metadata.NewIncomingContext(t.Context(), md)
 
 	capture := &ctxCapture{}
@@ -169,7 +192,7 @@ func TestUserIDFromContext_WithValue(t *testing.T) {
 	token, err := jwtMgr.GenerateToken("user-42")
 	require.NoError(t, err)
 
-	md := metadata.Pairs("authorization", token)
+	md := metadata.Pairs("authorization", "Bearer "+token)
 	ctx := metadata.NewIncomingContext(t.Context(), md)
 
 	capture := &ctxCapture{}

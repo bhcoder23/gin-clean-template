@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"strings"
 
 	"github.com/bhcoder23/gin-clean-template/pkg/jwt"
 	"google.golang.org/grpc"
@@ -13,6 +14,8 @@ import (
 type contextKey string
 
 const userIDKey contextKey = "userID"
+
+const bearerParts = 2
 
 // UserIDFromContext extracts the user ID from the context.
 func UserIDFromContext(ctx context.Context) (string, bool) {
@@ -43,7 +46,12 @@ func AuthInterceptor(jwtManager *jwt.Manager) grpc.UnaryServerInterceptor {
 			return nil, status.Error(codes.Unauthenticated, "missing authorization token")
 		}
 
-		userID, err := jwtManager.ParseToken(values[0])
+		parts := strings.SplitN(values[0], " ", bearerParts)
+		if len(parts) != bearerParts || parts[0] != "Bearer" {
+			return nil, status.Error(codes.Unauthenticated, "invalid authorization header format")
+		}
+
+		userID, err := jwtManager.ParseToken(parts[1])
 		if err != nil {
 			return nil, status.Error(codes.Unauthenticated, "invalid or expired token")
 		}
