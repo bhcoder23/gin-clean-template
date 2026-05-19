@@ -2,12 +2,15 @@
 package app
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/bhcoder23/gin-clean-template/config"
+	"github.com/bhcoder23/gin-clean-template/internal/infra/outbox"
 	"github.com/bhcoder23/gin-clean-template/internal/infra/persistence"
 	amqprpc "github.com/bhcoder23/gin-clean-template/internal/transport/amqp_rpc"
 	"github.com/bhcoder23/gin-clean-template/internal/transport/grpc"
@@ -22,6 +25,7 @@ import (
 	"github.com/bhcoder23/gin-clean-template/pkg/jwt"
 	"github.com/bhcoder23/gin-clean-template/pkg/logger"
 	natsRPCServer "github.com/bhcoder23/gin-clean-template/pkg/nats/nats_rpc/server"
+	"github.com/bhcoder23/gin-clean-template/pkg/observability"
 	"github.com/bhcoder23/gin-clean-template/pkg/postgres"
 	rmqRPCServer "github.com/bhcoder23/gin-clean-template/pkg/rabbitmq/rmq_rpc/server"
 	pbgrpc "google.golang.org/grpc"
@@ -39,6 +43,8 @@ type servers struct {
 	grpc *grpcserver.Server
 	http *httpserver.Server
 }
+
+var errUnsupportedOutboxPublisher = errors.New("unsupported outbox publisher")
 
 type transportSet struct {
 	http bool
@@ -61,18 +67,20 @@ func (t transportSet) any() bool {
 }
 
 func initUseCases(pg *postgres.Postgres, jwtManager *jwt.Manager) useCases {
-	userRepo := persistence.NewUserRepo(pg)
-	taskRepo := persistence.NewTaskRepo(pg)
-	notificationRepo := persistence.NewNotificationRepo(pg)
+	stores := persistence.NewStores(pg)
+	userRepo := stores.Users()
+	taskRepo := stores.Tasks()
+	notificationRepo := stores.Notifications()
+	transactor := persistence.NewTransactor(pg)
 
 	return useCases{
 		user:         user.New(userRepo, jwtManager),
-		task:         task.New(taskRepo, notificationRepo),
+		task:         task.New(taskRepo, notificationRepo, transactor),
 		notification: notification.New(notificationRepo),
 	}
 }
 
-func initServers(cfg *config.Config, uc useCases, jwtManager *jwt.Manager, l logger.Interface) servers {
+func initServers(cfg *config.Config, uc useCases, jwtManager *jwt.Manager, pg *postgres.Postgres, l logger.Interface) servers {
 	enabled := enabledTransports(cfg)
 	if !enabled.any() {
 		l.Fatal("app - Run - initServers: at least one transport must be enabled")
@@ -105,7 +113,10 @@ func initServers(cfg *config.Config, uc useCases, jwtManager *jwt.Manager, l log
 	if enabled.grpc {
 		grpcServer := grpcserver.New(l,
 			grpcserver.Port(cfg.GRPC.Port),
-			grpcserver.ServerOptions(pbgrpc.UnaryInterceptor(grpcmw.AuthInterceptor(jwtManager))),
+			grpcserver.ServerOptions(pbgrpc.ChainUnaryInterceptor(
+				grpcmw.RequestIDInterceptor(),
+				grpcmw.AuthInterceptor(jwtManager),
+			)),
 		)
 		grpc.NewRouter(grpcServer.App, uc.notification, uc.user, uc.task, l)
 
@@ -114,7 +125,7 @@ func initServers(cfg *config.Config, uc useCases, jwtManager *jwt.Manager, l log
 
 	if enabled.http {
 		httpServer := httpserver.New(l, httpserver.GinMode(cfg.HTTP.Mode), httpserver.Port(cfg.HTTP.Port))
-		restapi.NewRouter(httpServer.App, cfg, uc.notification, uc.user, uc.task, jwtManager, l)
+		restapi.NewRouter(httpServer.App, cfg, uc.notification, uc.user, uc.task, jwtManager, l, restapi.ReadinessCheck(pg.Ping))
 
 		s.http = httpServer
 	}
@@ -220,22 +231,83 @@ func (s *servers) shutdownServers(l logger.Interface) {
 	}
 }
 
+func startOutboxRelay(cfg *config.Config, pg *postgres.Postgres, l logger.Interface) (func() error, error) {
+	if !cfg.Outbox.Enabled {
+		return func() error { return nil }, nil
+	}
+
+	if cfg.Outbox.Publisher != "nats" {
+		return nil, fmt.Errorf("%w: %s", errUnsupportedOutboxPublisher, cfg.Outbox.Publisher)
+	}
+
+	natsURL := cfg.Outbox.NATSURL
+	if natsURL == "" {
+		natsURL = cfg.NATS.URL
+	}
+
+	publisher, err := outbox.NewNATSPublisher(natsURL, cfg.Outbox.SubjectPrefix)
+	if err != nil {
+		return nil, fmt.Errorf("app - startOutboxRelay - outbox.NewNATSPublisher: %w", err)
+	}
+
+	relay := outbox.NewRelay(outbox.NewStore(pg.Pool), publisher, l, outbox.RelayConfig{
+		PollInterval:   cfg.Outbox.PollInterval,
+		BatchSize:      cfg.Outbox.BatchSize,
+		MaxAttempts:    cfg.Outbox.MaxAttempts,
+		LockTimeout:    cfg.Outbox.LockTimeout,
+		PublishTimeout: cfg.Outbox.PublishTimeout,
+	})
+	relay.Start(context.Background())
+
+	return func() error {
+		defer publisher.Shutdown()
+
+		return relay.Shutdown()
+	}, nil
+}
+
 // Run creates objects via constructors.
 func Run(cfg *config.Config) {
 	l := logger.New(cfg.Log.Level)
 
+	shutdownTracing, err := observability.InitTracing(observability.TraceConfig{
+		Enabled:     cfg.Trace.Enabled,
+		Exporter:    cfg.Trace.Exporter,
+		ServiceName: cfg.Trace.ServiceName,
+	})
+	if err != nil {
+		l.Fatal(fmt.Errorf("app - Run - observability.InitTracing: %w", err))
+	}
+
+	defer func() {
+		if err := shutdownTracing(context.Background()); err != nil {
+			l.Error(fmt.Errorf("app - Run - shutdownTracing: %w", err))
+		}
+	}()
+
 	// Repository
-	pg, err := postgres.New(cfg.PG.URL, postgres.MaxPoolSize(cfg.PG.PoolMax))
+	pg, err := postgres.New(cfg.PG.URL, postgres.MaxPoolSize(cfg.PG.PoolMax), postgres.Logger(l))
 	if err != nil {
 		l.Fatal(fmt.Errorf("app - Run - postgres.New: %w", err))
 	}
 	defer pg.Close()
 
+	shutdownOutbox, err := startOutboxRelay(cfg, pg, l)
+	if err != nil {
+		l.Fatal(fmt.Errorf("app - Run - startOutboxRelay: %w", err))
+	}
+
+	defer func() {
+		if err := shutdownOutbox(); err != nil {
+			l.Error(fmt.Errorf("app - Run - shutdownOutbox: %w", err))
+		}
+	}()
+
 	// JWT
 	jwtManager := jwt.New(cfg.JWT.Secret, cfg.JWT.TokenExpiry)
 
 	uc := initUseCases(pg, jwtManager)
-	s := initServers(cfg, uc, jwtManager, l)
+	s := initServers(cfg, uc, jwtManager, pg, l)
 	s.startServers()
 	s.waitForShutdown(l)
 }

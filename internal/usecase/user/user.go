@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/mail"
+	"strings"
 	"time"
 
 	"github.com/bhcoder23/gin-clean-template/internal/domain"
@@ -12,6 +14,8 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
+
+const minPasswordLength = 6
 
 // UseCase -.
 type UseCase struct {
@@ -29,6 +33,22 @@ func New(r appports.UserStore, j *jwt.Manager) *UseCase {
 
 // Register -.
 func (uc *UseCase) Register(ctx context.Context, username, email, password string) (domain.User, error) {
+	username = strings.TrimSpace(username)
+	email = strings.TrimSpace(email)
+
+	if len([]rune(username)) < 3 || len([]rune(username)) > 255 {
+		return domain.User{}, domain.ErrInvalidUsername
+	}
+
+	addr, err := mail.ParseAddress(email)
+	if err != nil || addr.Address != email {
+		return domain.User{}, domain.ErrInvalidEmail
+	}
+
+	if len(password) < minPasswordLength {
+		return domain.User{}, domain.ErrPasswordTooShort
+	}
+
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return domain.User{}, fmt.Errorf("UserUseCase - Register - bcrypt.GenerateFromPassword: %w", err)

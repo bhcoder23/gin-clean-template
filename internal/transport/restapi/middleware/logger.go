@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/bhcoder23/gin-clean-template/pkg/logger"
+	"github.com/bhcoder23/gin-clean-template/pkg/requestid"
 	"github.com/gin-gonic/gin"
 )
 
@@ -20,6 +21,11 @@ func buildRequestMessage(ctx *gin.Context) string {
 	result.WriteString(strconv.Itoa(ctx.Writer.Status()))
 	result.WriteString(" ")
 	result.WriteString(strconv.Itoa(ctx.Writer.Size()))
+
+	if id, ok := requestid.FromContext(ctx.Request.Context()); ok {
+		result.WriteString(" request_id=")
+		result.WriteString(id)
+	}
 
 	return result.String()
 }

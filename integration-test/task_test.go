@@ -19,6 +19,9 @@ import (
 const (
 	statusTodo       = "todo"
 	statusInProgress = "in_progress"
+	updatedTaskBody  = `{"title":"updated title","description":"updated description"}`
+	codeUnauthorized = "UNAUTHORIZED"
+	codeTaskNotFound = "TASK_NOT_FOUND"
 )
 
 type taskResponse struct {
@@ -194,12 +197,10 @@ func TestHTTPTaskUpdateV1(t *testing.T) {
 	token := registerAndLogin(t)
 	created := httpCreateTask(t, token, "update task", "test description")
 
-	updateBody := `{"title":"updated title","description":"updated description"}`
-
 	ctx, cancel := context.WithTimeout(t.Context(), requestTimeout)
 	defer cancel()
 
-	resp, err := doAuthenticatedRequest(ctx, http.MethodPut, basePathV1+"/tasks/"+created.ID, bytes.NewBufferString(updateBody), token)
+	resp, err := doAuthenticatedRequest(ctx, http.MethodPut, basePathV1+"/tasks/"+created.ID, bytes.NewBufferString(updatedTaskBody), token)
 	if err != nil {
 		t.Fatalf("Update task: %v", err)
 	}
@@ -233,12 +234,10 @@ func TestHTTPTaskUpdateDoneRejectedV1(t *testing.T) {
 	}
 	resp.Body.Close()
 
-	updateBody := `{"title":"updated title","description":"updated description"}`
-
 	ctx, cancel := context.WithTimeout(t.Context(), requestTimeout)
 	defer cancel()
 
-	resp, err = doAuthenticatedRequest(ctx, http.MethodPut, basePathV1+"/tasks/"+created.ID, bytes.NewBufferString(updateBody), token)
+	resp, err = doAuthenticatedRequest(ctx, http.MethodPut, basePathV1+"/tasks/"+created.ID, bytes.NewBufferString(updatedTaskBody), token)
 	if err != nil {
 		t.Fatalf("Update done task: %v", err)
 	}
@@ -709,16 +708,16 @@ func TestRMQTaskKnownErrorsV1(t *testing.T) {
 		"limit":  10,
 		"offset": 0,
 	}), &listResp)
-	if err != rmqrpc.ErrUnauthorized {
-		t.Fatalf("expected ErrUnauthorized, got %v", err)
+	if rmqrpc.ErrorCode(err) != codeUnauthorized {
+		t.Fatalf("expected code %s, got %s: %v", codeUnauthorized, rmqrpc.ErrorCode(err), err)
 	}
 
 	var getResp taskResponse
 	err = client.RemoteCall("v1.task.get", authenticatedPayload(token, map[string]string{
 		"id": "00000000-0000-0000-0000-000000000000",
 	}), &getResp)
-	if err != rmqrpc.ErrTaskNotFound {
-		t.Fatalf("expected ErrTaskNotFound, got %v", err)
+	if rmqrpc.ErrorCode(err) != codeTaskNotFound {
+		t.Fatalf("expected code %s, got %s: %v", codeTaskNotFound, rmqrpc.ErrorCode(err), err)
 	}
 }
 
@@ -745,15 +744,15 @@ func TestNATSTaskKnownErrorsV1(t *testing.T) {
 		"limit":  10,
 		"offset": 0,
 	}), &listResp)
-	if err != natsrpc.ErrUnauthorized {
-		t.Fatalf("expected ErrUnauthorized, got %v", err)
+	if natsrpc.ErrorCode(err) != codeUnauthorized {
+		t.Fatalf("expected code %s, got %s: %v", codeUnauthorized, natsrpc.ErrorCode(err), err)
 	}
 
 	var getResp taskResponse
 	err = client.RemoteCall("v1.task.get", authenticatedPayload(token, map[string]string{
 		"id": "00000000-0000-0000-0000-000000000000",
 	}), &getResp)
-	if err != natsrpc.ErrTaskNotFound {
-		t.Fatalf("expected ErrTaskNotFound, got %v", err)
+	if natsrpc.ErrorCode(err) != codeTaskNotFound {
+		t.Fatalf("expected code %s, got %s: %v", codeTaskNotFound, natsrpc.ErrorCode(err), err)
 	}
 }

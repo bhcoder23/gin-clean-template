@@ -4,8 +4,7 @@ import (
 	"context"
 
 	v1 "github.com/bhcoder23/gin-clean-template/docs/proto/v1"
-	"github.com/bhcoder23/gin-clean-template/internal/transport/errlog"
-	"github.com/bhcoder23/gin-clean-template/internal/transport/errmap"
+	"github.com/bhcoder23/gin-clean-template/internal/apperror"
 	grpcmw "github.com/bhcoder23/gin-clean-template/internal/transport/grpc/middleware"
 	"github.com/bhcoder23/gin-clean-template/internal/transport/grpc/v1/response"
 	"google.golang.org/grpc/codes"
@@ -16,8 +15,9 @@ import (
 func (c *AuthController) Register(ctx context.Context, req *v1.RegisterRequest) (*v1.RegisterResponse, error) {
 	user, err := c.u.Register(ctx, req.GetUsername(), req.GetEmail(), req.GetPassword())
 	if err != nil {
-		errlog.Log(c.l, err, "grpc - v1 - Register")
-		return nil, errmap.GRPC(err)
+		apperror.Log(c.l, err, "grpc - v1 - Register")
+
+		return nil, apperror.GRPC(err)
 	}
 
 	return response.NewRegisterResponse(&user), nil
@@ -27,8 +27,9 @@ func (c *AuthController) Register(ctx context.Context, req *v1.RegisterRequest) 
 func (c *AuthController) Login(ctx context.Context, req *v1.LoginRequest) (*v1.LoginResponse, error) {
 	token, err := c.u.Login(ctx, req.GetEmail(), req.GetPassword())
 	if err != nil {
-		errlog.Log(c.l, err, "grpc - v1 - Login")
-		return nil, errmap.GRPC(err)
+		apperror.Log(c.l, err, "grpc - v1 - Login")
+
+		return nil, apperror.GRPC(err)
 	}
 
 	return &v1.LoginResponse{Token: token}, nil
@@ -43,8 +44,9 @@ func (c *AuthController) GetProfile(ctx context.Context, _ *v1.GetProfileRequest
 
 	user, err := c.u.GetUser(ctx, userID)
 	if err != nil {
-		errlog.Log(c.l, err, "grpc - v1 - GetProfile")
-		return nil, errmap.GRPC(err)
+		apperror.Log(c.l, err, "grpc - v1 - GetProfile")
+
+		return nil, apperror.GRPC(err)
 	}
 
 	return response.NewGetProfileResponse(&user), nil

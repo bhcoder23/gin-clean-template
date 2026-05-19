@@ -1,6 +1,10 @@
 package natsrpc
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/bhcoder23/gin-clean-template/pkg/rpcstatus"
+)
 
 var (
 	// ErrTimeout -.
@@ -9,64 +13,29 @@ var (
 	ErrInternalServer = errors.New("internal server error")
 	// ErrBadHandler -.
 	ErrBadHandler = errors.New("unregistered handler")
-	// ErrInvalidRequest -.
-	ErrInvalidRequest = errors.New("invalid request body")
-	// ErrUnauthorized -.
-	ErrUnauthorized = errors.New("unauthorized")
-	// ErrUserAlreadyExists -.
-	ErrUserAlreadyExists = errors.New("user already exists")
-	// ErrInvalidCredentials -.
-	ErrInvalidCredentials = errors.New("invalid credentials")
-	// ErrUserNotFound -.
-	ErrUserNotFound = errors.New("user not found")
-	// ErrTaskNotFound -.
-	ErrTaskNotFound = errors.New("task not found")
-	// ErrTaskTitleRequired -.
-	ErrTaskTitleRequired = errors.New("task title is required")
-	// ErrTaskCompleted -.
-	ErrTaskCompleted = errors.New("completed task cannot be modified")
-	// ErrInvalidTransition -.
-	ErrInvalidTransition = errors.New("invalid status transition")
-	// ErrNotificationNotFound -.
-	ErrNotificationNotFound = errors.New("notification not found")
 )
 
-// Success -.
-const Success = "success"
+const (
+	Success            = rpcstatus.Success
+	CodeInternalServer = rpcstatus.CodeInternalServer
+	CodeBadHandler     = rpcstatus.CodeBadHandler
+	HeaderErrorMessage = rpcstatus.HeaderErrorMessage
+)
 
-func ErrorFromStatus(status string) error {
-	switch status {
-	case Success:
-		return nil
-	case ErrBadHandler.Error():
-		return ErrBadHandler
-	case ErrInternalServer.Error():
-		return ErrInternalServer
-	case ErrInvalidRequest.Error():
-		return ErrInvalidRequest
-	case ErrUnauthorized.Error():
-		return ErrUnauthorized
-	case ErrUserAlreadyExists.Error():
-		return ErrUserAlreadyExists
-	case ErrInvalidCredentials.Error():
-		return ErrInvalidCredentials
-	case ErrUserNotFound.Error():
-		return ErrUserNotFound
-	case ErrTaskNotFound.Error():
-		return ErrTaskNotFound
-	case ErrTaskTitleRequired.Error():
-		return ErrTaskTitleRequired
-	case ErrTaskCompleted.Error():
-		return ErrTaskCompleted
-	case ErrInvalidTransition.Error():
-		return ErrInvalidTransition
-	case ErrNotificationNotFound.Error():
-		return ErrNotificationNotFound
-	default:
-		return nil
-	}
+type Error = rpcstatus.Error
+
+func ErrorFromStatus(status, message string) error {
+	return rpcstatus.FromStatus(status, message, CodeInternalServer, ErrInternalServer.Error())
 }
 
-func IsKnownStatus(status string) bool {
-	return ErrorFromStatus(status) != nil
+func ErrorFromError(err error) Error {
+	return rpcstatus.FromError(err, CodeInternalServer, ErrInternalServer.Error())
+}
+
+func ErrorCode(err error) string {
+	return rpcstatus.Code(err)
+}
+
+func ErrorMessage(err error) string {
+	return rpcstatus.Message(err)
 }

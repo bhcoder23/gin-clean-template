@@ -56,6 +56,54 @@ func TestRegister(t *testing.T) {
 
 		require.ErrorIs(t, err, domain.ErrUserAlreadyExists)
 	})
+
+	t.Run("register trims username and email", func(t *testing.T) {
+		t.Parallel()
+
+		uc, repo := newUserUseCase(t)
+		repo.EXPECT().Store(context.Background(), gomock.Any()).DoAndReturn(func(_ context.Context, u *domain.User) error {
+			assert.Equal(t, "testuser", u.Username)
+			assert.Equal(t, "test@example.com", u.Email)
+
+			return nil
+		})
+
+		u, err := uc.Register(context.Background(), "  testuser  ", "  test@example.com  ", "password123")
+
+		require.NoError(t, err)
+		assert.Equal(t, "testuser", u.Username)
+		assert.Equal(t, "test@example.com", u.Email)
+	})
+}
+
+func TestRegisterValidatesCoreFieldsBeforeRepository(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		username string
+		email    string
+		password string
+		wantErr  error
+	}{
+		{name: "short username", username: "ab", email: "test@example.com", password: "password123", wantErr: domain.ErrInvalidUsername},
+		{name: "invalid email", username: "testuser", email: "not-an-email", password: "password123", wantErr: domain.ErrInvalidEmail},
+		{name: "display email", username: "testuser", email: "Test <test@example.com>", password: "password123", wantErr: domain.ErrInvalidEmail},
+		{name: "short password", username: "testuser", email: "test@example.com", password: "12345", wantErr: domain.ErrPasswordTooShort},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			uc, repo := newUserUseCase(t)
+			repo.EXPECT().Store(gomock.Any(), gomock.Any()).Times(0)
+
+			_, err := uc.Register(context.Background(), tt.username, tt.email, tt.password)
+
+			require.ErrorIs(t, err, tt.wantErr)
+		})
+	}
 }
 
 func TestLogin(t *testing.T) {

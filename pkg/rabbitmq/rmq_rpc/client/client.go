@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
+	"github.com/bhcoder23/gin-clean-template/pkg/logger"
 	rmqrpc "github.com/bhcoder23/gin-clean-template/pkg/rabbitmq/rmq_rpc"
+	"github.com/bhcoder23/gin-clean-template/pkg/requestid"
 	"github.com/goccy/go-json"
 	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -35,9 +36,10 @@ type Message struct {
 }
 
 type pendingCall struct {
-	done   chan struct{}
-	status string
-	body   []byte
+	done    chan struct{}
+	status  string
+	message string
+	body    []byte
 }
 
 // Client -.
@@ -54,6 +56,7 @@ type Client struct {
 	calls map[string]*pendingCall
 
 	timeout time.Duration
+	logger  logger.Interface
 }
 
 // New -.
@@ -72,7 +75,7 @@ func New(url, serverExchange, clientExchange string, opts ...Option) (*Client, e
 		eg:             group,
 		conn:           rmqrpc.New(clientExchange, cfg),
 		serverExchange: serverExchange,
-		notify:         make(chan error),
+		notify:         make(chan error, 1),
 		stop:           make(chan struct{}),
 		calls:          make(map[string]*pendingCall),
 		timeout:        _defaultTimeout,
@@ -82,6 +85,8 @@ func New(url, serverExchange, clientExchange string, opts ...Option) (*Client, e
 	for _, opt := range opts {
 		opt(c)
 	}
+
+	c.conn.Logger = c.logger
 
 	err := c.conn.AttemptConnect()
 	if err != nil {
@@ -117,30 +122,33 @@ func (c *Client) Shutdown() error {
 
 // RemoteCall -.
 func (c *Client) RemoteCall(handler string, request, response any) error {
+	return c.RemoteCallContext(context.Background(), handler, request, response)
+}
+
+// RemoteCallContext sends a request with context metadata propagation.
+func (c *Client) RemoteCallContext(ctx context.Context, handler string, request, response any) error {
 	err := c.preRemoteCallWait()
 	if err != nil {
 		return fmt.Errorf("rmq_rpc client - Client - RemoteCall - c.preWait: %w", err)
 	}
 
 	corrID := uuid.New().String()
-
-	err = c.publish(corrID, handler, request)
-	if err != nil {
-		return fmt.Errorf("rmq_rpc client - Client - RemoteCall - c.publish: %w", err)
-	}
-
 	call := &pendingCall{done: make(chan struct{})}
 
 	c.addCall(corrID, call)
 	defer c.deleteCall(corrID)
+
+	err = c.publish(ctx, corrID, handler, request)
+	if err != nil {
+		return fmt.Errorf("rmq_rpc client - Client - RemoteCall - c.publish: %w", err)
+	}
 
 	err = c.remoteCallWait(call)
 	if err != nil {
 		return fmt.Errorf("rmq_rpc client - Client - RemoteCall - c.remoteCallWait: %w", err)
 	}
 
-	switch call.status {
-	case rmqrpc.Success:
+	if call.status == rmqrpc.Success {
 		err = json.Unmarshal(call.body, &response)
 		if err != nil {
 			return fmt.Errorf("rmq_rpc client - Client - RemoteCall - json.Unmarshal: %w", err)
@@ -149,7 +157,7 @@ func (c *Client) RemoteCall(handler string, request, response any) error {
 		return nil
 	}
 
-	if err = rmqrpc.ErrorFromStatus(call.status); err != nil {
+	if err := rmqrpc.ErrorFromStatus(call.status, call.message); err != nil {
 		return err
 	}
 
@@ -160,7 +168,11 @@ func (c *Client) preRemoteCallWait() error {
 	select {
 	case <-c.ctx.Done():
 		return c.ctx.Err()
-	case err := <-c.notify:
+	case err, ok := <-c.notify:
+		if !ok {
+			return ErrConnectionClosed
+		}
+
 		return fmt.Errorf("rmq_rpc client - Client - RemoteCall - c.notify: %w", err)
 	case <-c.stop:
 		return ErrConnectionClosed
@@ -177,7 +189,11 @@ func (c *Client) remoteCallWait(call *pendingCall) error {
 	select {
 	case <-c.ctx.Done():
 		return c.ctx.Err()
-	case err := <-c.notify:
+	case err, ok := <-c.notify:
+		if !ok {
+			return ErrConnectionClosed
+		}
+
 		return fmt.Errorf("rmq_rpc client - Client - RemoteCall - c.notify: %w", err)
 	case <-c.stop:
 		return ErrConnectionClosed
@@ -191,11 +207,14 @@ func (c *Client) remoteCallWait(call *pendingCall) error {
 
 func (c *Client) start() {
 	c.eg.Go(func() error {
+		defer close(c.notify)
+
 		err := c.handleMessages()
 		if err != nil {
-			c.notify <- err
-
-			close(c.notify)
+			select {
+			case c.notify <- err:
+			default:
+			}
 
 			return err
 		}
@@ -239,6 +258,7 @@ func (c *Client) serveCall(d *amqp.Delivery) {
 	}
 
 	call.status = d.Type
+	call.message = errorMessageFromDelivery(d)
 	call.body = d.Body
 	close(call.done)
 }
@@ -268,11 +288,13 @@ func (c *Client) deleteCall(corrID string) {
 
 func (c *Client) ack(d *amqp.Delivery, multiple bool) {
 	if err := d.Ack(multiple); err != nil {
-		log.Printf("rmq_rpc client - ack: %v", err)
+		if c.logger != nil {
+			c.logger.Error(err, "rmq_rpc client - ack")
+		}
 	}
 }
 
-func (c *Client) publish(corrID, handler string, request any) error {
+func (c *Client) publish(ctx context.Context, corrID, handler string, request any) error {
 	var (
 		requestBody []byte
 		err         error
@@ -293,6 +315,7 @@ func (c *Client) publish(corrID, handler string, request any) error {
 		amqp.Publishing{
 			ContentType:   "application/json",
 			CorrelationId: corrID,
+			Headers:       amqp.Table{requestid.MetadataKey: requestIDFromContext(ctx)},
 			ReplyTo:       c.conn.ConsumerExchange,
 			Type:          handler,
 			Body:          requestBody,
@@ -303,4 +326,21 @@ func (c *Client) publish(corrID, handler string, request any) error {
 	}
 
 	return nil
+}
+
+func requestIDFromContext(ctx context.Context) string {
+	if id, ok := requestid.FromContext(ctx); ok {
+		return id
+	}
+
+	return requestid.New()
+}
+
+func errorMessageFromDelivery(d *amqp.Delivery) string {
+	message, ok := d.Headers[rmqrpc.HeaderErrorMessage].(string)
+	if !ok {
+		return ""
+	}
+
+	return message
 }

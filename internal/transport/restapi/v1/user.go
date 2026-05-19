@@ -3,8 +3,7 @@ package v1
 import (
 	"net/http"
 
-	"github.com/bhcoder23/gin-clean-template/internal/transport/errlog"
-	"github.com/bhcoder23/gin-clean-template/internal/transport/errmap"
+	"github.com/bhcoder23/gin-clean-template/internal/apperror"
 	"github.com/bhcoder23/gin-clean-template/internal/transport/restapi/v1/request"
 	"github.com/bhcoder23/gin-clean-template/internal/transport/restapi/v1/response"
 	"github.com/gin-gonic/gin"
@@ -26,24 +25,23 @@ func (r *V1) register(ctx *gin.Context) {
 	var body request.Register
 
 	if err := ctx.ShouldBindJSON(&body); err != nil {
-		errlog.Log(r.l, err, "restapi - v1 - register")
-		errorResponse(ctx, http.StatusBadRequest, "invalid request body")
+		apperror.Log(r.l, err, "restapi - v1 - register")
+		errorResponse(ctx, http.StatusBadRequest, apperror.CodeInvalidRequest, "invalid request body")
 
 		return
 	}
 
 	if err := r.v.Struct(body); err != nil {
-		errlog.Log(r.l, err, "restapi - v1 - register")
-		errorResponse(ctx, http.StatusBadRequest, "invalid request body")
+		apperror.Log(r.l, err, "restapi - v1 - register")
+		errorResponse(ctx, http.StatusBadRequest, apperror.CodeInvalidRequest, "invalid request body")
 
 		return
 	}
 
 	user, err := r.u.Register(ctx.Request.Context(), body.Username, body.Email, body.Password)
 	if err != nil {
-		errlog.Log(r.l, err, "restapi - v1 - register")
-		statusCode, message := errmap.HTTP(err)
-		errorResponse(ctx, statusCode, message)
+		apperror.Log(r.l, err, "restapi - v1 - register")
+		mappedErrorResponse(ctx, err)
 
 		return
 	}
@@ -67,24 +65,23 @@ func (r *V1) login(ctx *gin.Context) {
 	var body request.Login
 
 	if err := ctx.ShouldBindJSON(&body); err != nil {
-		errlog.Log(r.l, err, "restapi - v1 - login")
-		errorResponse(ctx, http.StatusBadRequest, "invalid request body")
+		apperror.Log(r.l, err, "restapi - v1 - login")
+		errorResponse(ctx, http.StatusBadRequest, apperror.CodeInvalidRequest, "invalid request body")
 
 		return
 	}
 
 	if err := r.v.Struct(body); err != nil {
-		errlog.Log(r.l, err, "restapi - v1 - login")
-		errorResponse(ctx, http.StatusBadRequest, "invalid request body")
+		apperror.Log(r.l, err, "restapi - v1 - login")
+		errorResponse(ctx, http.StatusBadRequest, apperror.CodeInvalidRequest, "invalid request body")
 
 		return
 	}
 
 	token, err := r.u.Login(ctx.Request.Context(), body.Email, body.Password)
 	if err != nil {
-		errlog.Log(r.l, err, "restapi - v1 - login")
-		statusCode, message := errmap.HTTP(err)
-		errorResponse(ctx, statusCode, message)
+		apperror.Log(r.l, err, "restapi - v1 - login")
+		mappedErrorResponse(ctx, err)
 
 		return
 	}
@@ -106,16 +103,15 @@ func (r *V1) login(ctx *gin.Context) {
 func (r *V1) profile(ctx *gin.Context) {
 	userID, ok := userIDFromContext(ctx)
 	if !ok {
-		errorResponse(ctx, http.StatusUnauthorized, "unauthorized")
+		errorResponse(ctx, http.StatusUnauthorized, apperror.CodeUnauthorized, "unauthorized")
 
 		return
 	}
 
 	user, err := r.u.GetUser(ctx.Request.Context(), userID)
 	if err != nil {
-		errlog.Log(r.l, err, "restapi - v1 - profile")
-		statusCode, message := errmap.HTTP(err)
-		errorResponse(ctx, statusCode, message)
+		apperror.Log(r.l, err, "restapi - v1 - profile")
+		mappedErrorResponse(ctx, err)
 
 		return
 	}

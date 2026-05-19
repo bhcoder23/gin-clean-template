@@ -3,6 +3,7 @@ package usecase
 
 import (
 	"context"
+	"time"
 
 	"github.com/bhcoder23/gin-clean-template/internal/domain"
 )
@@ -34,6 +35,24 @@ type (
 		Delete(ctx context.Context, userID, taskID string) error
 	}
 
+	// OutboxStore stores integration events in the same transaction as business data.
+	OutboxStore interface {
+		Add(ctx context.Context, event *OutboxEvent) error
+	}
+
+	// StoreProvider exposes repositories bound to the same persistence executor.
+	StoreProvider interface {
+		Users() UserStore
+		Tasks() TaskStore
+		Notifications() NotificationStore
+		Outbox() OutboxStore
+	}
+
+	// Transactor runs multi-repository use cases in one transaction.
+	Transactor interface {
+		WithinTx(ctx context.Context, fn func(context.Context, StoreProvider) error) error
+	}
+
 	// TaskFilter -.
 	TaskFilter struct {
 		Status *domain.TaskStatus
@@ -47,6 +66,17 @@ type (
 		UnreadOnly *bool
 		Limit      uint64
 		Offset     uint64
+	}
+
+	// OutboxEvent describes a business integration event before relay metadata is added.
+	OutboxEvent struct {
+		ID            string
+		AggregateType string
+		AggregateID   string
+		EventType     string
+		Payload       []byte
+		Headers       map[string]string
+		AvailableAt   time.Time
 	}
 
 	// Notification -.

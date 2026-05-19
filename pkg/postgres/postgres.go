@@ -3,14 +3,19 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"log"
 	"math"
 	"time"
 
 	"github.com/Masterminds/squirrel"
+	"github.com/bhcoder23/gin-clean-template/pkg/logger"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+var errNilPool = errors.New("postgres pool is nil")
 
 const (
 	_defaultMaxPoolSize  = 1
@@ -23,9 +28,17 @@ type Postgres struct {
 	maxPoolSize  int
 	connAttempts int
 	connTimeout  time.Duration
+	logger       logger.Interface
 
 	Builder squirrel.StatementBuilderType
 	Pool    *pgxpool.Pool
+}
+
+// Executor is the minimal query contract shared by pgxpool.Pool and pgx.Tx.
+type Executor interface {
+	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 }
 
 // New -.
@@ -56,7 +69,7 @@ func New(url string, opts ...Option) (*Postgres, error) {
 			break
 		}
 
-		log.Printf("Postgres is trying to connect, attempts left: %d", pg.connAttempts)
+		pg.info("Postgres is trying to connect, attempts left: %d", pg.connAttempts)
 
 		time.Sleep(pg.connTimeout)
 
@@ -70,6 +83,14 @@ func New(url string, opts ...Option) (*Postgres, error) {
 	return pg, nil
 }
 
+func (p *Postgres) info(message string, args ...any) {
+	if p.logger == nil {
+		return
+	}
+
+	p.logger.Info(message, args...)
+}
+
 // Close -.
 func (p *Postgres) Close() {
 	if p.Pool != nil {
@@ -77,8 +98,45 @@ func (p *Postgres) Close() {
 	}
 }
 
-func safeIntToInt32(v int) int32 {
-	clamped := v & math.MaxInt32
+// Ping checks database readiness.
+func (p *Postgres) Ping(ctx context.Context) error {
+	if p.Pool == nil {
+		return errNilPool
+	}
 
-	return int32(clamped)
+	return p.Pool.Ping(ctx)
+}
+
+// WithinTx runs fn in a transaction and passes the transaction executor to it.
+func (p *Postgres) WithinTx(ctx context.Context, fn func(context.Context, Executor) error) error {
+	tx, err := p.Pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("postgres - WithinTx - Begin: %w", err)
+	}
+
+	if err = fn(ctx, tx); err != nil {
+		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
+			return fmt.Errorf("postgres - WithinTx - rollback after %w: %w", err, rollbackErr)
+		}
+
+		return err
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return fmt.Errorf("postgres - WithinTx - Commit: %w", err)
+	}
+
+	return nil
+}
+
+func safeIntToInt32(v int) int32 {
+	if v <= 0 {
+		return 1
+	}
+
+	if v > math.MaxInt32 {
+		return math.MaxInt32
+	}
+
+	return int32(v)
 }

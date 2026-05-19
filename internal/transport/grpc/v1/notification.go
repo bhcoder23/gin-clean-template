@@ -4,8 +4,7 @@ import (
 	"context"
 
 	v1 "github.com/bhcoder23/gin-clean-template/docs/proto/v1"
-	"github.com/bhcoder23/gin-clean-template/internal/transport/errlog"
-	"github.com/bhcoder23/gin-clean-template/internal/transport/errmap"
+	"github.com/bhcoder23/gin-clean-template/internal/apperror"
 	grpcmw "github.com/bhcoder23/gin-clean-template/internal/transport/grpc/middleware"
 	"github.com/bhcoder23/gin-clean-template/internal/transport/grpc/v1/response"
 	"google.golang.org/grpc/codes"
@@ -20,6 +19,7 @@ func (c *NotificationController) ListNotifications(ctx context.Context, req *v1.
 	}
 
 	var unreadOnly *bool
+
 	if req.GetUnreadOnly() {
 		value := true
 		unreadOnly = &value
@@ -27,7 +27,7 @@ func (c *NotificationController) ListNotifications(ctx context.Context, req *v1.
 
 	notifications, total, err := c.n.List(ctx, userID, unreadOnly, int(req.GetLimit()), int(req.GetOffset()))
 	if err != nil {
-		errlog.Log(c.l, err, "grpc - v1 - ListNotifications")
+		apperror.Log(c.l, err, "grpc - v1 - ListNotifications")
 
 		return nil, status.Error(codes.Internal, "internal server error")
 	}
@@ -44,8 +44,9 @@ func (c *NotificationController) MarkNotificationRead(ctx context.Context, req *
 
 	notification, err := c.n.MarkRead(ctx, userID, req.GetId())
 	if err != nil {
-		errlog.Log(c.l, err, "grpc - v1 - MarkNotificationRead")
-		return nil, errmap.GRPC(err)
+		apperror.Log(c.l, err, "grpc - v1 - MarkNotificationRead")
+
+		return nil, apperror.GRPC(err)
 	}
 
 	return response.NewNotificationResponse(&notification), nil

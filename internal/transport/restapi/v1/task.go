@@ -4,9 +4,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/bhcoder23/gin-clean-template/internal/apperror"
 	"github.com/bhcoder23/gin-clean-template/internal/domain"
-	"github.com/bhcoder23/gin-clean-template/internal/transport/errlog"
-	"github.com/bhcoder23/gin-clean-template/internal/transport/errmap"
 	"github.com/bhcoder23/gin-clean-template/internal/transport/restapi/v1/request"
 	"github.com/bhcoder23/gin-clean-template/internal/transport/restapi/v1/response"
 	"github.com/gin-gonic/gin"
@@ -28,7 +27,7 @@ import (
 func (r *V1) createTask(ctx *gin.Context) {
 	userID, ok := userIDFromContext(ctx)
 	if !ok {
-		errorResponse(ctx, http.StatusUnauthorized, "unauthorized")
+		errorResponse(ctx, http.StatusUnauthorized, apperror.CodeUnauthorized, "unauthorized")
 
 		return
 	}
@@ -36,24 +35,23 @@ func (r *V1) createTask(ctx *gin.Context) {
 	var body request.CreateTask
 
 	if err := ctx.ShouldBindJSON(&body); err != nil {
-		errlog.Log(r.l, err, "restapi - v1 - createTask")
-		errorResponse(ctx, http.StatusBadRequest, "invalid request body")
+		apperror.Log(r.l, err, "restapi - v1 - createTask")
+		errorResponse(ctx, http.StatusBadRequest, apperror.CodeInvalidRequest, "invalid request body")
 
 		return
 	}
 
 	if err := r.v.Struct(body); err != nil {
-		errlog.Log(r.l, err, "restapi - v1 - createTask")
-		errorResponse(ctx, http.StatusBadRequest, "invalid request body")
+		apperror.Log(r.l, err, "restapi - v1 - createTask")
+		errorResponse(ctx, http.StatusBadRequest, apperror.CodeInvalidRequest, "invalid request body")
 
 		return
 	}
 
 	task, err := r.tk.Create(ctx.Request.Context(), userID, body.Title, body.Description)
 	if err != nil {
-		errlog.Log(r.l, err, "restapi - v1 - createTask")
-		statusCode, message := errmap.HTTP(err)
-		errorResponse(ctx, statusCode, message)
+		apperror.Log(r.l, err, "restapi - v1 - createTask")
+		mappedErrorResponse(ctx, err)
 
 		return
 	}
@@ -79,7 +77,7 @@ func (r *V1) createTask(ctx *gin.Context) {
 func (r *V1) listTasks(ctx *gin.Context) {
 	userID, ok := userIDFromContext(ctx)
 	if !ok {
-		errorResponse(ctx, http.StatusUnauthorized, "unauthorized")
+		errorResponse(ctx, http.StatusUnauthorized, apperror.CodeUnauthorized, "unauthorized")
 
 		return
 	}
@@ -89,7 +87,7 @@ func (r *V1) listTasks(ctx *gin.Context) {
 	if rawStatus := ctx.Query("status"); rawStatus != "" {
 		taskStatus := domain.TaskStatus(rawStatus)
 		if !taskStatus.Valid() {
-			errorResponse(ctx, http.StatusBadRequest, "invalid task status")
+			errorResponse(ctx, http.StatusBadRequest, apperror.CodeInvalidRequest, "invalid task status")
 
 			return
 		}
@@ -99,22 +97,22 @@ func (r *V1) listTasks(ctx *gin.Context) {
 
 	limit, err := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
 	if err != nil {
-		errorResponse(ctx, http.StatusBadRequest, "invalid limit")
+		errorResponse(ctx, http.StatusBadRequest, apperror.CodeInvalidRequest, "invalid limit")
 
 		return
 	}
 
 	offset, err := strconv.Atoi(ctx.DefaultQuery("offset", "0"))
 	if err != nil {
-		errorResponse(ctx, http.StatusBadRequest, "invalid offset")
+		errorResponse(ctx, http.StatusBadRequest, apperror.CodeInvalidRequest, "invalid offset")
 
 		return
 	}
 
 	tasks, total, err := r.tk.List(ctx.Request.Context(), userID, status, ctx.Query("q"), limit, offset)
 	if err != nil {
-		errlog.Log(r.l, err, "restapi - v1 - listTasks")
-		errorResponse(ctx, http.StatusInternalServerError, "internal server error")
+		apperror.Log(r.l, err, "restapi - v1 - listTasks")
+		errorResponse(ctx, http.StatusInternalServerError, apperror.CodeInternalServer, "internal server error")
 
 		return
 	}
@@ -140,16 +138,15 @@ func (r *V1) listTasks(ctx *gin.Context) {
 func (r *V1) getTask(ctx *gin.Context) {
 	userID, ok := userIDFromContext(ctx)
 	if !ok {
-		errorResponse(ctx, http.StatusUnauthorized, "unauthorized")
+		errorResponse(ctx, http.StatusUnauthorized, apperror.CodeUnauthorized, "unauthorized")
 
 		return
 	}
 
 	task, err := r.tk.Get(ctx.Request.Context(), userID, ctx.Param("id"))
 	if err != nil {
-		errlog.Log(r.l, err, "restapi - v1 - getTask")
-		statusCode, message := errmap.HTTP(err)
-		errorResponse(ctx, statusCode, message)
+		apperror.Log(r.l, err, "restapi - v1 - getTask")
+		mappedErrorResponse(ctx, err)
 
 		return
 	}
@@ -175,7 +172,7 @@ func (r *V1) getTask(ctx *gin.Context) {
 func (r *V1) updateTask(ctx *gin.Context) {
 	userID, ok := userIDFromContext(ctx)
 	if !ok {
-		errorResponse(ctx, http.StatusUnauthorized, "unauthorized")
+		errorResponse(ctx, http.StatusUnauthorized, apperror.CodeUnauthorized, "unauthorized")
 
 		return
 	}
@@ -183,24 +180,23 @@ func (r *V1) updateTask(ctx *gin.Context) {
 	var body request.UpdateTask
 
 	if err := ctx.ShouldBindJSON(&body); err != nil {
-		errlog.Log(r.l, err, "restapi - v1 - updateTask")
-		errorResponse(ctx, http.StatusBadRequest, "invalid request body")
+		apperror.Log(r.l, err, "restapi - v1 - updateTask")
+		errorResponse(ctx, http.StatusBadRequest, apperror.CodeInvalidRequest, "invalid request body")
 
 		return
 	}
 
 	if err := r.v.Struct(body); err != nil {
-		errlog.Log(r.l, err, "restapi - v1 - updateTask")
-		errorResponse(ctx, http.StatusBadRequest, "invalid request body")
+		apperror.Log(r.l, err, "restapi - v1 - updateTask")
+		errorResponse(ctx, http.StatusBadRequest, apperror.CodeInvalidRequest, "invalid request body")
 
 		return
 	}
 
 	task, err := r.tk.Update(ctx.Request.Context(), userID, ctx.Param("id"), body.Title, body.Description)
 	if err != nil {
-		errlog.Log(r.l, err, "restapi - v1 - updateTask")
-		statusCode, message := errmap.HTTP(err)
-		errorResponse(ctx, statusCode, message)
+		apperror.Log(r.l, err, "restapi - v1 - updateTask")
+		mappedErrorResponse(ctx, err)
 
 		return
 	}
@@ -226,7 +222,7 @@ func (r *V1) updateTask(ctx *gin.Context) {
 func (r *V1) transitionTask(ctx *gin.Context) {
 	userID, ok := userIDFromContext(ctx)
 	if !ok {
-		errorResponse(ctx, http.StatusUnauthorized, "unauthorized")
+		errorResponse(ctx, http.StatusUnauthorized, apperror.CodeUnauthorized, "unauthorized")
 
 		return
 	}
@@ -234,24 +230,23 @@ func (r *V1) transitionTask(ctx *gin.Context) {
 	var body request.TransitionTask
 
 	if err := ctx.ShouldBindJSON(&body); err != nil {
-		errlog.Log(r.l, err, "restapi - v1 - transitionTask")
-		errorResponse(ctx, http.StatusBadRequest, "invalid request body")
+		apperror.Log(r.l, err, "restapi - v1 - transitionTask")
+		errorResponse(ctx, http.StatusBadRequest, apperror.CodeInvalidRequest, "invalid request body")
 
 		return
 	}
 
 	if err := r.v.Struct(body); err != nil {
-		errlog.Log(r.l, err, "restapi - v1 - transitionTask")
-		errorResponse(ctx, http.StatusBadRequest, "invalid request body")
+		apperror.Log(r.l, err, "restapi - v1 - transitionTask")
+		errorResponse(ctx, http.StatusBadRequest, apperror.CodeInvalidRequest, "invalid request body")
 
 		return
 	}
 
 	task, err := r.tk.Transition(ctx.Request.Context(), userID, ctx.Param("id"), body.Status)
 	if err != nil {
-		errlog.Log(r.l, err, "restapi - v1 - transitionTask")
-		statusCode, message := errmap.HTTP(err)
-		errorResponse(ctx, statusCode, message)
+		apperror.Log(r.l, err, "restapi - v1 - transitionTask")
+		mappedErrorResponse(ctx, err)
 
 		return
 	}
@@ -273,16 +268,15 @@ func (r *V1) transitionTask(ctx *gin.Context) {
 func (r *V1) deleteTask(ctx *gin.Context) {
 	userID, ok := userIDFromContext(ctx)
 	if !ok {
-		errorResponse(ctx, http.StatusUnauthorized, "unauthorized")
+		errorResponse(ctx, http.StatusUnauthorized, apperror.CodeUnauthorized, "unauthorized")
 
 		return
 	}
 
 	err := r.tk.Delete(ctx.Request.Context(), userID, ctx.Param("id"))
 	if err != nil {
-		errlog.Log(r.l, err, "restapi - v1 - deleteTask")
-		statusCode, message := errmap.HTTP(err)
-		errorResponse(ctx, statusCode, message)
+		apperror.Log(r.l, err, "restapi - v1 - deleteTask")
+		mappedErrorResponse(ctx, err)
 
 		return
 	}

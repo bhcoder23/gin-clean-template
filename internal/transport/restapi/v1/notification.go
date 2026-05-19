@@ -4,9 +4,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/bhcoder23/gin-clean-template/internal/apperror"
 	"github.com/bhcoder23/gin-clean-template/internal/domain"
-	"github.com/bhcoder23/gin-clean-template/internal/transport/errlog"
-	"github.com/bhcoder23/gin-clean-template/internal/transport/errmap"
 	_ "github.com/bhcoder23/gin-clean-template/internal/transport/restapi/v1/response" // for swaggo
 	"github.com/gin-gonic/gin"
 )
@@ -28,7 +27,7 @@ import (
 func (r *V1) listNotifications(ctx *gin.Context) {
 	userID, ok := userIDFromContext(ctx)
 	if !ok {
-		errorResponse(ctx, http.StatusUnauthorized, "unauthorized")
+		errorResponse(ctx, http.StatusUnauthorized, apperror.CodeUnauthorized, "unauthorized")
 
 		return
 	}
@@ -38,7 +37,7 @@ func (r *V1) listNotifications(ctx *gin.Context) {
 	if rawUnread := ctx.Query("unread_only"); rawUnread != "" {
 		parsed, err := strconv.ParseBool(rawUnread)
 		if err != nil {
-			errorResponse(ctx, http.StatusBadRequest, "invalid unread_only")
+			errorResponse(ctx, http.StatusBadRequest, apperror.CodeInvalidRequest, "invalid unread_only")
 
 			return
 		}
@@ -48,22 +47,22 @@ func (r *V1) listNotifications(ctx *gin.Context) {
 
 	limit, err := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
 	if err != nil {
-		errorResponse(ctx, http.StatusBadRequest, "invalid limit")
+		errorResponse(ctx, http.StatusBadRequest, apperror.CodeInvalidRequest, "invalid limit")
 
 		return
 	}
 
 	offset, err := strconv.Atoi(ctx.DefaultQuery("offset", "0"))
 	if err != nil {
-		errorResponse(ctx, http.StatusBadRequest, "invalid offset")
+		errorResponse(ctx, http.StatusBadRequest, apperror.CodeInvalidRequest, "invalid offset")
 
 		return
 	}
 
 	notifications, total, err := r.n.List(ctx.Request.Context(), userID, unreadOnly, limit, offset)
 	if err != nil {
-		errlog.Log(r.l, err, "restapi - v1 - listNotifications")
-		errorResponse(ctx, http.StatusInternalServerError, "internal server error")
+		apperror.Log(r.l, err, "restapi - v1 - listNotifications")
+		errorResponse(ctx, http.StatusInternalServerError, apperror.CodeInternalServer, "internal server error")
 
 		return
 	}
@@ -89,16 +88,15 @@ func (r *V1) listNotifications(ctx *gin.Context) {
 func (r *V1) markNotificationRead(ctx *gin.Context) {
 	userID, ok := userIDFromContext(ctx)
 	if !ok {
-		errorResponse(ctx, http.StatusUnauthorized, "unauthorized")
+		errorResponse(ctx, http.StatusUnauthorized, apperror.CodeUnauthorized, "unauthorized")
 
 		return
 	}
 
 	notification, err := r.n.MarkRead(ctx.Request.Context(), userID, ctx.Param("id"))
 	if err != nil {
-		errlog.Log(r.l, err, "restapi - v1 - markNotificationRead")
-		statusCode, message := errmap.HTTP(err)
-		errorResponse(ctx, statusCode, message)
+		apperror.Log(r.l, err, "restapi - v1 - markNotificationRead")
+		mappedErrorResponse(ctx, err)
 
 		return
 	}

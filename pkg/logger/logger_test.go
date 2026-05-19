@@ -233,8 +233,8 @@ func TestFatal_ExitsAndLogs(t *testing.T) {
 		t.Fatalf("expected non-nil error due to os.Exit in Fatal, got nil; output: %s", string(out))
 	}
 
-	exitErr, ok := err.(*exec.ExitError)
-	if !ok {
+	var exitErr *exec.ExitError
+	if !errors.As(err, &exitErr) {
 		t.Fatalf("expected exec.ExitError, got %T", err)
 	}
 

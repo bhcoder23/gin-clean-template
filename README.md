@@ -42,7 +42,7 @@ This template is one application process with multiple transport adapters:
 - gRPC ([gRPC](https://grpc.io/) framework based on protobuf)
 - REST API ([Gin](https://github.com/gin-gonic/gin) framework)
 
-The default local developer path enables all four demo transports so the scaffold can show its full shape out of the box. Derived projects should still keep only the adapters they actually plan to support.
+The default local developer path starts with HTTP only. The other transports stay available as optional adapters so derived projects can opt in without carrying dependencies they do not need.
 
 The template includes three domains to demonstrate multi-service architecture.
 They are sample domains for the scaffold, not required product boundaries:
@@ -65,15 +65,17 @@ The demo domains can be exposed through all four transports (REST, gRPC, AMQP RP
 
 ## Start here
 
-Use the full demo path first. It exercises the template the way it is designed to be read:
+Use the HTTP-first path first. It keeps the template easy to trim while still exercising the main scaffold:
 
 ```sh
-# Start PostgreSQL, RabbitMQ, and NATS
+# Start PostgreSQL, RabbitMQ, and NATS for local experiments
 make compose-up
 
-# Run migrations and start REST, gRPC, AMQP RPC, and NATS RPC
+# Run migrations and start the enabled transports
 make run
 ```
+
+To inspect every demo adapter in one process, use `make run-all-transports`.
 
 Once the app is running, the fastest way to understand the scaffold is to walk one complete REST flow end to end.
 
@@ -179,7 +181,7 @@ Task activity notifications persisted in PostgreSQL and exposed through every tr
 
 ### Local development
 
-Docker is optional. The default local path is the full demo path, so `.env.example` enables HTTP, gRPC, RabbitMQ RPC, and NATS RPC.
+Docker is optional. `.env.example` starts HTTP only; gRPC, RabbitMQ RPC, and NATS RPC are opt-in. The Docker Compose demo stack sets those flags explicitly when it needs the full adapter set.
 
 ```sh
 # PostgreSQL, RabbitMQ, and NATS for the full demo
@@ -218,6 +220,7 @@ Check services in the full demo stack:
   - Server Exchange: `rpc_server`
 - REST API:
   - http://app.lvh.me/healthz | http://127.0.0.1:8080/healthz
+  - http://app.lvh.me/readyz | http://127.0.0.1:8080/readyz
   - http://app.lvh.me/metrics | http://127.0.0.1:8080/metrics
   - http://app.lvh.me/swagger | http://127.0.0.1:8080/swagger
 - gRPC:
@@ -255,9 +258,25 @@ Example: [.env.example](.env.example)
 Default local transport flags:
 
 - `HTTP_ENABLED=true`
-- `GRPC_ENABLED=true`
-- `RMQ_ENABLED=true`
-- `NATS_ENABLED=true`
+- `GRPC_ENABLED=false`
+- `RMQ_ENABLED=false`
+- `NATS_ENABLED=false`
+
+`APP_ENV=production` adds guardrails: Swagger must be disabled and the sample JWT secret must be replaced.
+
+Request correlation is part of the base scaffold:
+
+- HTTP reads and writes `X-Request-ID`.
+- gRPC, AMQP RPC, and NATS RPC use `x-request-id` metadata/header propagation.
+- REST error responses include `request_id` so logs and client failures can be joined.
+
+Optional tracing is available but disabled by default:
+
+- `TRACE_ENABLED=false`
+- `TRACE_EXPORTER=stdout`
+- `TRACE_SERVICE_NAME=gin-clean-template`
+
+The stdout exporter is intentionally concrete so the integration can be verified locally. Derived projects can replace the exporter with OTLP/collector wiring without changing handlers or use cases.
 
 [docker-compose.yml](docker-compose.yml) uses `env` variables to configure services.
 
@@ -547,6 +566,37 @@ The layer with which business logic directly interacts is usually called the _in
 These can be persistence implementations in `internal/infra/persistence`, technical clients in `pkg`, and other
 integration adapters.
 In the template, the _infrastructure_ packages are located inside `internal/infra`.
+
+For cross-repository writes, the persistence layer exposes a small transaction template instead of requiring an ORM:
+
+- `persistence.NewStores(pg)` creates repositories backed by the normal pool.
+- `persistence.NewTransactor(pg).WithinTx(ctx, fn)` creates repositories backed by one `pgx` transaction.
+- Repositories depend on the minimal `postgres.Executor` interface, so the same repository can run on a pool or a transaction.
+
+This is intentionally a template extension point. Simple single-repository demo use cases can call repositories directly; flows that need atomic multi-table updates should opt into `WithinTx` without leaking `pgx.Tx` into `internal/usecase`. The task sample uses this boundary when writing the task and its notification.
+
+REST errors use a stable envelope:
+
+```json
+{
+  "error": {
+    "code": "TASK_NOT_FOUND",
+    "message": "task not found",
+    "request_id": "..."
+  }
+}
+```
+
+The mapping is centralized in `internal/apperror`, following the same idea as Kratos' `code`/`reason` split: transport status codes remain protocol-level, while the string `code` is the stable client-facing reason. Demo domain errors live next to their sample model files; REST, gRPC, AMQP, and NATS error mapping plus expected-error log classification are handled in `apperror` to avoid duplicated transport helper packages.
+
+For event publishing, the scaffold includes a production-shaped transactional outbox example:
+
+- migration-backed `outbox_events` table
+- `outbox.Store` for transactional inserts, pending claims, and stale publishing-lock recovery
+- `outbox.Relay` with retries, lock timeout, bounded publish timeout, and failure tracking
+- `outbox.NATSPublisher` as the concrete default publisher binding with client-side flush
+
+It is disabled by default through `OUTBOX_ENABLED=false`. When enabled with `OUTBOX_PUBLISHER=nats`, the relay publishes events to `OUTBOX_SUBJECT_PREFIX + "." + event_type`. Business use cases should write outbox rows through the `OutboxStore` port exposed by the transaction `StoreProvider`, inside the same `WithinTx` callback as their database changes, when they need DB + outbox consistency. Core NATS publish + flush confirms the client handed the message to the server connection; it is not a durable broker acknowledgment. Swap the publisher to JetStream, Kafka, RabbitMQ confirms, or another durable mechanism when the business event must survive broker-side failure.
 
 You can choose how to call the entry points as you wish. The options are:
 

@@ -27,6 +27,40 @@ func newTaskUseCase(t *testing.T) (*task.UseCase, *MockTaskStore, *MockNotificat
 	return useCase, mockRepo, notificationRepo
 }
 
+type fakeStoreProvider struct {
+	userStore         appports.UserStore
+	taskStore         appports.TaskStore
+	notificationStore appports.NotificationStore
+	outboxStore       appports.OutboxStore
+}
+
+func (p fakeStoreProvider) Users() appports.UserStore {
+	return p.userStore
+}
+
+func (p fakeStoreProvider) Tasks() appports.TaskStore {
+	return p.taskStore
+}
+
+func (p fakeStoreProvider) Notifications() appports.NotificationStore {
+	return p.notificationStore
+}
+
+func (p fakeStoreProvider) Outbox() appports.OutboxStore {
+	return p.outboxStore
+}
+
+type fakeTransactor struct {
+	stores appports.StoreProvider
+	called bool
+}
+
+func (tx *fakeTransactor) WithinTx(ctx context.Context, fn func(context.Context, appports.StoreProvider) error) error {
+	tx.called = true
+
+	return fn(ctx, tx.stores)
+}
+
 func TestTaskCreate(t *testing.T) {
 	t.Parallel()
 
@@ -166,7 +200,7 @@ func TestTaskList(t *testing.T) {
 	})
 }
 
-func TestTaskUpdate(t *testing.T) {
+func TestTaskUpdate(t *testing.T) { //nolint:funlen // related update scenarios share setup and are clearer together.
 	t.Parallel()
 
 	t.Run("update success", func(t *testing.T) {
@@ -371,6 +405,33 @@ func TestTaskCreate_RepoError(t *testing.T) {
 	require.ErrorIs(t, err, errRepoGeneric)
 }
 
+func TestTaskCreate_UsesTransactionStores(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	baseTaskStore := NewMockTaskStore(ctrl)
+	baseNotificationStore := NewMockNotificationStore(ctrl)
+	txTaskStore := NewMockTaskStore(ctrl)
+	txNotificationStore := NewMockNotificationStore(ctrl)
+	transactor := &fakeTransactor{
+		stores: fakeStoreProvider{
+			taskStore:         txTaskStore,
+			notificationStore: txNotificationStore,
+		},
+	}
+	uc := task.New(baseTaskStore, baseNotificationStore, transactor)
+
+	baseTaskStore.EXPECT().Store(gomock.Any(), gomock.Any()).Times(0)
+	baseNotificationStore.EXPECT().Store(gomock.Any(), gomock.Any()).Times(0)
+	txTaskStore.EXPECT().Store(context.Background(), gomock.Any()).Return(nil)
+	txNotificationStore.EXPECT().Store(context.Background(), gomock.Any()).Return(nil)
+
+	_, err := uc.Create(context.Background(), "user-id-123", "title", "desc")
+
+	require.NoError(t, err)
+	require.True(t, transactor.called)
+}
+
 func TestTaskGet_RepoError(t *testing.T) {
 	t.Parallel()
 
@@ -487,4 +548,39 @@ func TestTaskTransition_NotFound(t *testing.T) {
 
 	require.Error(t, err)
 	require.ErrorIs(t, err, domain.ErrTaskNotFound)
+}
+
+func TestTaskTransition_UsesTransactionStores(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	baseTaskStore := NewMockTaskStore(ctrl)
+	baseNotificationStore := NewMockNotificationStore(ctrl)
+	txTaskStore := NewMockTaskStore(ctrl)
+	txNotificationStore := NewMockNotificationStore(ctrl)
+	transactor := &fakeTransactor{
+		stores: fakeStoreProvider{
+			taskStore:         txTaskStore,
+			notificationStore: txNotificationStore,
+		},
+	}
+	uc := task.New(baseTaskStore, baseNotificationStore, transactor)
+	todoTask := domain.Task{
+		ID:     "task-id-123",
+		UserID: "user-id-123",
+		Title:  "My Task",
+		Status: domain.TaskStatusTodo,
+	}
+
+	baseTaskStore.EXPECT().GetByID(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+	baseTaskStore.EXPECT().Update(gomock.Any(), gomock.Any()).Times(0)
+	baseNotificationStore.EXPECT().Store(gomock.Any(), gomock.Any()).Times(0)
+	txTaskStore.EXPECT().GetByID(context.Background(), "user-id-123", "task-id-123").Return(todoTask, nil)
+	txTaskStore.EXPECT().Update(context.Background(), gomock.Any()).Return(nil)
+	txNotificationStore.EXPECT().Store(context.Background(), gomock.Any()).Return(nil)
+
+	_, err := uc.Transition(context.Background(), "user-id-123", "task-id-123", domain.TaskStatusInProgress)
+
+	require.NoError(t, err)
+	require.True(t, transactor.called)
 }

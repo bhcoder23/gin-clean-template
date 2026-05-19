@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -352,7 +351,7 @@ func healthCheck(attempts int) error {
 			return nil
 		}
 
-		log.Printf("Integration tests: url %s is not available, attempts left: %d", healthPath, attempts)
+		fmt.Fprintf(os.Stderr, "Integration tests: url %s is not available, attempts left: %d\n", healthPath, attempts)
 
 		time.Sleep(time.Second)
 
@@ -365,10 +364,11 @@ func healthCheck(attempts int) error {
 func TestMain(m *testing.M) {
 	err := healthCheck(attempts)
 	if err != nil {
-		log.Fatalf("Integration tests: httpURL %s is not available: %s", httpURL, err)
+		fmt.Fprintf(os.Stderr, "Integration tests: httpURL %s is not available: %s\n", httpURL, err)
+		os.Exit(1)
 	}
 
-	log.Printf("Integration tests: httpURL %s is available", httpURL)
+	fmt.Fprintf(os.Stderr, "Integration tests: httpURL %s is available\n", httpURL)
 
 	code := m.Run()
 	os.Exit(code)

@@ -2,9 +2,9 @@ package rmqrpc
 
 import (
 	"fmt"
-	"log"
 	"time"
 
+	"github.com/bhcoder23/gin-clean-template/pkg/logger"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -13,6 +13,7 @@ type Config struct {
 	URL      string
 	WaitTime time.Duration
 	Attempts int
+	Logger   logger.Interface
 }
 
 // Connection -.
@@ -42,7 +43,7 @@ func (c *Connection) AttemptConnect() error {
 			break
 		}
 
-		log.Printf("RabbitMQ is trying to connect, attempts left: %d", i)
+		c.info("RabbitMQ is trying to connect, attempts left: %d", i)
 		time.Sleep(c.WaitTime)
 	}
 
@@ -51,6 +52,14 @@ func (c *Connection) AttemptConnect() error {
 	}
 
 	return nil
+}
+
+func (c *Connection) info(message string, args ...any) {
+	if c.Logger == nil {
+		return
+	}
+
+	c.Logger.Info(message, args...)
 }
 
 func (c *Connection) connect() error {

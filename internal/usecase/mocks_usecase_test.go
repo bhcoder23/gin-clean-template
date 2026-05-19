@@ -266,6 +266,162 @@ func (mr *MockTaskStoreMockRecorder) Update(ctx, task any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockTaskStore)(nil).Update), ctx, task)
 }
 
+// MockOutboxStore is a mock of OutboxStore interface.
+type MockOutboxStore struct {
+	ctrl     *gomock.Controller
+	recorder *MockOutboxStoreMockRecorder
+	isgomock struct{}
+}
+
+// MockOutboxStoreMockRecorder is the mock recorder for MockOutboxStore.
+type MockOutboxStoreMockRecorder struct {
+	mock *MockOutboxStore
+}
+
+// NewMockOutboxStore creates a new mock instance.
+func NewMockOutboxStore(ctrl *gomock.Controller) *MockOutboxStore {
+	mock := &MockOutboxStore{ctrl: ctrl}
+	mock.recorder = &MockOutboxStoreMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockOutboxStore) EXPECT() *MockOutboxStoreMockRecorder {
+	return m.recorder
+}
+
+// Add mocks base method.
+func (m *MockOutboxStore) Add(ctx context.Context, event *usecase.OutboxEvent) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Add", ctx, event)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Add indicates an expected call of Add.
+func (mr *MockOutboxStoreMockRecorder) Add(ctx, event any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Add", reflect.TypeOf((*MockOutboxStore)(nil).Add), ctx, event)
+}
+
+// MockStoreProvider is a mock of StoreProvider interface.
+type MockStoreProvider struct {
+	ctrl     *gomock.Controller
+	recorder *MockStoreProviderMockRecorder
+	isgomock struct{}
+}
+
+// MockStoreProviderMockRecorder is the mock recorder for MockStoreProvider.
+type MockStoreProviderMockRecorder struct {
+	mock *MockStoreProvider
+}
+
+// NewMockStoreProvider creates a new mock instance.
+func NewMockStoreProvider(ctrl *gomock.Controller) *MockStoreProvider {
+	mock := &MockStoreProvider{ctrl: ctrl}
+	mock.recorder = &MockStoreProviderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockStoreProvider) EXPECT() *MockStoreProviderMockRecorder {
+	return m.recorder
+}
+
+// Notifications mocks base method.
+func (m *MockStoreProvider) Notifications() usecase.NotificationStore {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Notifications")
+	ret0, _ := ret[0].(usecase.NotificationStore)
+	return ret0
+}
+
+// Notifications indicates an expected call of Notifications.
+func (mr *MockStoreProviderMockRecorder) Notifications() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Notifications", reflect.TypeOf((*MockStoreProvider)(nil).Notifications))
+}
+
+// Outbox mocks base method.
+func (m *MockStoreProvider) Outbox() usecase.OutboxStore {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Outbox")
+	ret0, _ := ret[0].(usecase.OutboxStore)
+	return ret0
+}
+
+// Outbox indicates an expected call of Outbox.
+func (mr *MockStoreProviderMockRecorder) Outbox() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Outbox", reflect.TypeOf((*MockStoreProvider)(nil).Outbox))
+}
+
+// Tasks mocks base method.
+func (m *MockStoreProvider) Tasks() usecase.TaskStore {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Tasks")
+	ret0, _ := ret[0].(usecase.TaskStore)
+	return ret0
+}
+
+// Tasks indicates an expected call of Tasks.
+func (mr *MockStoreProviderMockRecorder) Tasks() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Tasks", reflect.TypeOf((*MockStoreProvider)(nil).Tasks))
+}
+
+// Users mocks base method.
+func (m *MockStoreProvider) Users() usecase.UserStore {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Users")
+	ret0, _ := ret[0].(usecase.UserStore)
+	return ret0
+}
+
+// Users indicates an expected call of Users.
+func (mr *MockStoreProviderMockRecorder) Users() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Users", reflect.TypeOf((*MockStoreProvider)(nil).Users))
+}
+
+// MockTransactor is a mock of Transactor interface.
+type MockTransactor struct {
+	ctrl     *gomock.Controller
+	recorder *MockTransactorMockRecorder
+	isgomock struct{}
+}
+
+// MockTransactorMockRecorder is the mock recorder for MockTransactor.
+type MockTransactorMockRecorder struct {
+	mock *MockTransactor
+}
+
+// NewMockTransactor creates a new mock instance.
+func NewMockTransactor(ctrl *gomock.Controller) *MockTransactor {
+	mock := &MockTransactor{ctrl: ctrl}
+	mock.recorder = &MockTransactorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockTransactor) EXPECT() *MockTransactorMockRecorder {
+	return m.recorder
+}
+
+// WithinTx mocks base method.
+func (m *MockTransactor) WithinTx(ctx context.Context, fn func(context.Context, usecase.StoreProvider) error) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WithinTx", ctx, fn)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WithinTx indicates an expected call of WithinTx.
+func (mr *MockTransactorMockRecorder) WithinTx(ctx, fn any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WithinTx", reflect.TypeOf((*MockTransactor)(nil).WithinTx), ctx, fn)
+}
+
 // MockNotification is a mock of Notification interface.
 type MockNotification struct {
 	ctrl     *gomock.Controller

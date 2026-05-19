@@ -3,17 +3,16 @@ package v1
 import (
 	"context"
 
+	"github.com/bhcoder23/gin-clean-template/internal/apperror"
 	"github.com/bhcoder23/gin-clean-template/internal/domain"
 	"github.com/bhcoder23/gin-clean-template/internal/transport/amqp_rpc/v1/request"
-	"github.com/bhcoder23/gin-clean-template/internal/transport/errlog"
-	"github.com/bhcoder23/gin-clean-template/internal/transport/rpcerror"
 	"github.com/bhcoder23/gin-clean-template/pkg/rabbitmq/rmq_rpc/server"
 	"github.com/goccy/go-json"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 func (r *V1) listNotifications() server.CallHandler {
-	return func(d *amqp.Delivery) (any, error) {
+	return func(ctx context.Context, d *amqp.Delivery) (any, error) {
 		userID, data, err := extractUserID(d, r.j)
 		if err != nil {
 			return nil, err
@@ -22,7 +21,7 @@ func (r *V1) listNotifications() server.CallHandler {
 		var req request.ListNotifications
 		if len(data) > 0 {
 			if err = json.Unmarshal(data, &req); err != nil {
-				return nil, rpcerror.ErrInvalidRequest
+				return nil, apperror.RPC(apperror.ErrInvalidRequest)
 			}
 		}
 
@@ -31,11 +30,11 @@ func (r *V1) listNotifications() server.CallHandler {
 			unreadOnly = &req.UnreadOnly
 		}
 
-		notifications, total, err := r.n.List(context.Background(), userID, unreadOnly, req.Limit, req.Offset)
+		notifications, total, err := r.n.List(ctx, userID, unreadOnly, req.Limit, req.Offset)
 		if err != nil {
-			errlog.Log(r.l, err, "amqp_rpc - V1 - listNotifications")
+			apperror.Log(r.l, err, "amqp_rpc - V1 - listNotifications")
 
-			return nil, rpcerror.Normalize(err)
+			return nil, apperror.RPC(err)
 		}
 
 		return domain.NotificationList{Notifications: notifications, Total: total}, nil
@@ -43,7 +42,7 @@ func (r *V1) listNotifications() server.CallHandler {
 }
 
 func (r *V1) markNotificationRead() server.CallHandler {
-	return func(d *amqp.Delivery) (any, error) {
+	return func(ctx context.Context, d *amqp.Delivery) (any, error) {
 		userID, data, err := extractUserID(d, r.j)
 		if err != nil {
 			return nil, err
@@ -51,18 +50,18 @@ func (r *V1) markNotificationRead() server.CallHandler {
 
 		var req request.MarkNotificationRead
 		if err = json.Unmarshal(data, &req); err != nil {
-			return nil, rpcerror.ErrInvalidRequest
+			return nil, apperror.RPC(apperror.ErrInvalidRequest)
 		}
 
 		if err = r.v.Struct(req); err != nil {
-			return nil, rpcerror.ErrInvalidRequest
+			return nil, apperror.RPC(apperror.ErrInvalidRequest)
 		}
 
-		notification, err := r.n.MarkRead(context.Background(), userID, req.ID)
+		notification, err := r.n.MarkRead(ctx, userID, req.ID)
 		if err != nil {
-			errlog.Log(r.l, err, "amqp_rpc - V1 - markNotificationRead")
+			apperror.Log(r.l, err, "amqp_rpc - V1 - markNotificationRead")
 
-			return nil, rpcerror.Normalize(err)
+			return nil, apperror.RPC(err)
 		}
 
 		return notification, nil

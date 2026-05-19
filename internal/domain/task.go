@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"errors"
 	"slices"
 	"time"
 )
@@ -12,6 +13,13 @@ const (
 	TaskStatusTodo       TaskStatus = "todo"
 	TaskStatusInProgress TaskStatus = "in_progress"
 	TaskStatusDone       TaskStatus = "done"
+)
+
+var (
+	ErrTaskNotFound      = errors.New("task not found")
+	ErrTaskTitleRequired = errors.New("task title is required")
+	ErrTaskCompleted     = errors.New("completed task cannot be modified")
+	ErrInvalidTransition = errors.New("invalid status transition")
 )
 
 // Task -.

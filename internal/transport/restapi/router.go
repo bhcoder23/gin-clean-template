@@ -1,7 +1,9 @@
 package restapi
 
 import (
+	"context"
 	"net/http"
+	"time"
 
 	"github.com/bhcoder23/gin-clean-template/config"
 	_ "github.com/bhcoder23/gin-clean-template/docs" // Swagger docs.
@@ -16,6 +18,27 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
+const _defaultReadinessTimeout = 2 * time.Second
+
+type readinessResponse struct {
+	Error string `json:"error"`
+}
+
+type routerOptions struct {
+	readinessCheck   func(context.Context) error
+	readinessTimeout time.Duration
+}
+
+// Option configures REST router infrastructure hooks.
+type Option func(*routerOptions)
+
+// ReadinessCheck registers a dependency readiness check.
+func ReadinessCheck(check func(context.Context) error) Option {
+	return func(o *routerOptions) {
+		o.readinessCheck = check
+	}
+}
+
 // NewRouter -.
 // Swagger spec:
 //
@@ -27,7 +50,18 @@ import (
 //	@securityDefinitions.apikey BearerAuth
 //	@in header
 //	@name Authorization
-func NewRouter(app *gin.Engine, cfg *config.Config, n usecase.Notification, u usecase.User, tk usecase.Task, jwtManager *jwt.Manager, l logger.Interface) {
+func NewRouter(app *gin.Engine, cfg *config.Config, n usecase.Notification, u usecase.User, tk usecase.Task, jwtManager *jwt.Manager, l logger.Interface, opts ...Option) {
+	options := routerOptions{readinessTimeout: _defaultReadinessTimeout}
+	for _, opt := range opts {
+		opt(&options)
+	}
+
+	app.Use(middleware.RequestID())
+
+	if cfg.Trace.Enabled {
+		app.Use(middleware.Tracing(cfg.Trace.ServiceName))
+	}
+
 	app.Use(middleware.Logger(l), middleware.Recovery(l))
 
 	if cfg.Metrics.Enabled {
@@ -39,6 +73,26 @@ func NewRouter(app *gin.Engine, cfg *config.Config, n usecase.Notification, u us
 	}
 
 	app.GET("/healthz", func(ctx *gin.Context) {
+		ctx.Status(http.StatusOK)
+	})
+
+	app.GET("/readyz", func(ctx *gin.Context) {
+		if options.readinessCheck == nil {
+			ctx.Status(http.StatusOK)
+
+			return
+		}
+
+		checkCtx, cancel := context.WithTimeout(ctx.Request.Context(), options.readinessTimeout)
+		defer cancel()
+
+		if err := options.readinessCheck(checkCtx); err != nil {
+			l.Error(err, "restapi - readyz")
+			ctx.AbortWithStatusJSON(http.StatusServiceUnavailable, readinessResponse{Error: "service unavailable"})
+
+			return
+		}
+
 		ctx.Status(http.StatusOK)
 	})
 

@@ -14,17 +14,26 @@ import (
 
 // UserRepo -.
 type UserRepo struct {
-	*postgres.Postgres
+	builder  sq.StatementBuilderType
+	executor postgres.Executor
 }
 
 // NewUserRepo -.
 func NewUserRepo(pg *postgres.Postgres) *UserRepo {
-	return &UserRepo{pg}
+	return NewUserRepoWithExecutor(pg.Builder, pg.Pool)
+}
+
+// NewUserRepoWithExecutor creates a repository bound to a pool or transaction executor.
+func NewUserRepoWithExecutor(builder sq.StatementBuilderType, executor postgres.Executor) *UserRepo {
+	return &UserRepo{
+		builder:  builder,
+		executor: executor,
+	}
 }
 
 // Store -.
 func (r *UserRepo) Store(ctx context.Context, user *domain.User) error {
-	sql, args, err := r.Builder.
+	sql, args, err := r.builder.
 		Insert("users").
 		Columns("id, username, email, password_hash, created_at, updated_at").
 		Values(user.ID, user.Username, user.Email, user.PasswordHash, user.CreatedAt, user.UpdatedAt).
@@ -33,7 +42,7 @@ func (r *UserRepo) Store(ctx context.Context, user *domain.User) error {
 		return fmt.Errorf("UserRepo - Store - r.Builder: %w", err)
 	}
 
-	_, err = r.Pool.Exec(ctx, sql, args...)
+	_, err = r.executor.Exec(ctx, sql, args...)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
@@ -57,7 +66,7 @@ func (r *UserRepo) GetByEmail(ctx context.Context, email string) (domain.User, e
 }
 
 func (r *UserRepo) getUser(ctx context.Context, column, value string) (domain.User, error) {
-	sql, args, err := r.Builder.
+	sql, args, err := r.builder.
 		Select("id, username, email, password_hash, created_at, updated_at").
 		From("users").
 		Where(sq.Eq{column: value}).
@@ -68,7 +77,7 @@ func (r *UserRepo) getUser(ctx context.Context, column, value string) (domain.Us
 
 	var user domain.User
 
-	err = r.Pool.QueryRow(ctx, sql, args...).
+	err = r.executor.QueryRow(ctx, sql, args...).
 		Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

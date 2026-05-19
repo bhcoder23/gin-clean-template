@@ -14,7 +14,8 @@ import (
 
 // TaskRepo -.
 type TaskRepo struct {
-	*postgres.Postgres
+	builder  sq.StatementBuilderType
+	executor postgres.Executor
 }
 
 func collectTaskRows(rows pgx.Rows, limit uint64) ([]domain.Task, error) {
@@ -40,12 +41,20 @@ func collectTaskRows(rows pgx.Rows, limit uint64) ([]domain.Task, error) {
 
 // NewTaskRepo -.
 func NewTaskRepo(pg *postgres.Postgres) *TaskRepo {
-	return &TaskRepo{pg}
+	return NewTaskRepoWithExecutor(pg.Builder, pg.Pool)
+}
+
+// NewTaskRepoWithExecutor creates a repository bound to a pool or transaction executor.
+func NewTaskRepoWithExecutor(builder sq.StatementBuilderType, executor postgres.Executor) *TaskRepo {
+	return &TaskRepo{
+		builder:  builder,
+		executor: executor,
+	}
 }
 
 // Store -.
 func (r *TaskRepo) Store(ctx context.Context, task *domain.Task) error {
-	sql, args, err := r.Builder.
+	sql, args, err := r.builder.
 		Insert("tasks").
 		Columns("id, user_id, title, description, status, created_at, updated_at").
 		Values(task.ID, task.UserID, task.Title, task.Description, task.Status, task.CreatedAt, task.UpdatedAt).
@@ -54,7 +63,7 @@ func (r *TaskRepo) Store(ctx context.Context, task *domain.Task) error {
 		return fmt.Errorf("TaskRepo - Store - r.Builder: %w", err)
 	}
 
-	_, err = r.Pool.Exec(ctx, sql, args...)
+	_, err = r.executor.Exec(ctx, sql, args...)
 	if err != nil {
 		return fmt.Errorf("TaskRepo - Store - r.Pool.Exec: %w", err)
 	}
@@ -64,7 +73,7 @@ func (r *TaskRepo) Store(ctx context.Context, task *domain.Task) error {
 
 // GetByID -.
 func (r *TaskRepo) GetByID(ctx context.Context, userID, taskID string) (domain.Task, error) {
-	sql, args, err := r.Builder.
+	sql, args, err := r.builder.
 		Select("id, user_id, title, description, status, created_at, updated_at").
 		From("tasks").
 		Where(sq.Eq{"id": taskID, "user_id": userID}).
@@ -75,7 +84,7 @@ func (r *TaskRepo) GetByID(ctx context.Context, userID, taskID string) (domain.T
 
 	var task domain.Task
 
-	err = r.Pool.QueryRow(ctx, sql, args...).
+	err = r.executor.QueryRow(ctx, sql, args...).
 		Scan(&task.ID, &task.UserID, &task.Title, &task.Description, &task.Status, &task.CreatedAt, &task.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -90,7 +99,7 @@ func (r *TaskRepo) GetByID(ctx context.Context, userID, taskID string) (domain.T
 
 // List -.
 func (r *TaskRepo) List(ctx context.Context, userID string, filter appports.TaskFilter) ([]domain.Task, int, error) {
-	countBuilder := r.Builder.
+	countBuilder := r.builder.
 		Select("COUNT(*)").
 		From("tasks").
 		Where(sq.Eq{"user_id": userID})
@@ -110,12 +119,12 @@ func (r *TaskRepo) List(ctx context.Context, userID string, filter appports.Task
 
 	var total int
 
-	err = r.Pool.QueryRow(ctx, countSQL, countArgs...).Scan(&total)
+	err = r.executor.QueryRow(ctx, countSQL, countArgs...).Scan(&total)
 	if err != nil {
 		return nil, 0, fmt.Errorf("TaskRepo - List - count query: %w", err)
 	}
 
-	dataBuilder := r.Builder.
+	dataBuilder := r.builder.
 		Select("id, user_id, title, description, status, created_at, updated_at").
 		From("tasks").
 		Where(sq.Eq{"user_id": userID}).
@@ -136,7 +145,7 @@ func (r *TaskRepo) List(ctx context.Context, userID string, filter appports.Task
 		return nil, 0, fmt.Errorf("TaskRepo - List - dataBuilder: %w", err)
 	}
 
-	rows, err := r.Pool.Query(ctx, dataSQL, dataArgs...)
+	rows, err := r.executor.Query(ctx, dataSQL, dataArgs...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("TaskRepo - List - r.Pool.Query: %w", err)
 	}
@@ -152,7 +161,7 @@ func (r *TaskRepo) List(ctx context.Context, userID string, filter appports.Task
 
 // Update -.
 func (r *TaskRepo) Update(ctx context.Context, task *domain.Task) error {
-	sql, args, err := r.Builder.
+	sql, args, err := r.builder.
 		Update("tasks").
 		Set("title", task.Title).
 		Set("description", task.Description).
@@ -164,7 +173,7 @@ func (r *TaskRepo) Update(ctx context.Context, task *domain.Task) error {
 		return fmt.Errorf("TaskRepo - Update - r.Builder: %w", err)
 	}
 
-	result, err := r.Pool.Exec(ctx, sql, args...)
+	result, err := r.executor.Exec(ctx, sql, args...)
 	if err != nil {
 		return fmt.Errorf("TaskRepo - Update - r.Pool.Exec: %w", err)
 	}
@@ -178,7 +187,7 @@ func (r *TaskRepo) Update(ctx context.Context, task *domain.Task) error {
 
 // Delete -.
 func (r *TaskRepo) Delete(ctx context.Context, userID, taskID string) error {
-	sql, args, err := r.Builder.
+	sql, args, err := r.builder.
 		Delete("tasks").
 		Where(sq.Eq{"id": taskID, "user_id": userID}).
 		ToSql()
@@ -186,7 +195,7 @@ func (r *TaskRepo) Delete(ctx context.Context, userID, taskID string) error {
 		return fmt.Errorf("TaskRepo - Delete - r.Builder: %w", err)
 	}
 
-	result, err := r.Pool.Exec(ctx, sql, args...)
+	result, err := r.executor.Exec(ctx, sql, args...)
 	if err != nil {
 		return fmt.Errorf("TaskRepo - Delete - r.Pool.Exec: %w", err)
 	}

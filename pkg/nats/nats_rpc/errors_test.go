@@ -1,26 +1,49 @@
 package natsrpc
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
+var errUnexpected = errors.New("unexpected")
+
 func TestErrorFromStatus(t *testing.T) {
 	t.Parallel()
 
-	require.Nil(t, ErrorFromStatus(Success))
-	require.Equal(t, ErrUnauthorized, ErrorFromStatus(ErrUnauthorized.Error()))
-	require.Equal(t, ErrTaskNotFound, ErrorFromStatus(ErrTaskNotFound.Error()))
-	require.Equal(t, ErrNotificationNotFound, ErrorFromStatus(ErrNotificationNotFound.Error()))
-	require.Nil(t, ErrorFromStatus("unknown"))
+	require.Nil(t, ErrorFromStatus(Success, ""))
+
+	err := ErrorFromStatus("TASK_NOT_FOUND", "task not found")
+	require.EqualError(t, err, "task not found")
+	require.Equal(t, "TASK_NOT_FOUND", ErrorCode(err))
+	require.Equal(t, "task not found", ErrorMessage(err))
+
+	err = ErrorFromStatus("UNKNOWN_CODE", "")
+	require.EqualError(t, err, "UNKNOWN_CODE")
+	require.Equal(t, "UNKNOWN_CODE", ErrorCode(err))
+	require.Equal(t, "UNKNOWN_CODE", ErrorMessage(err))
 }
 
-func TestIsKnownStatus(t *testing.T) {
+func TestErrorFromError(t *testing.T) {
 	t.Parallel()
 
-	require.True(t, IsKnownStatus(ErrInvalidRequest.Error()))
-	require.True(t, IsKnownStatus(ErrInvalidTransition.Error()))
-	require.False(t, IsKnownStatus("unknown"))
-	require.False(t, IsKnownStatus(Success))
+	err := ErrorFromError(rpcErrorStub{code: "UNAUTHORIZED", message: "unauthorized"})
+	require.Equal(t, "UNAUTHORIZED", err.Code)
+	require.Equal(t, "unauthorized", err.Message)
+
+	err = ErrorFromError(errUnexpected)
+	require.Equal(t, CodeInternalServer, err.Code)
+	require.Equal(t, "internal server error", err.Message)
 }
+
+type rpcErrorStub struct {
+	code    string
+	message string
+}
+
+func (e rpcErrorStub) Error() string { return e.message }
+
+func (e rpcErrorStub) RPCCode() string { return e.code }
+
+func (e rpcErrorStub) RPCMessage() string { return e.message }

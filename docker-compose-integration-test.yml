@@ -1,7 +1,6 @@
 services:
   integration-test:
     container_name: integration-test
-    platform: linux/amd64
     pid: "host"
     build:
       context: .

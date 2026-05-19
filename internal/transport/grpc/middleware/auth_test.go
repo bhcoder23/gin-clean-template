@@ -58,6 +58,25 @@ func runSkipAuthTest(t *testing.T, method string) {
 	assert.True(t, called)
 }
 
+func requireUnauthenticated(ctx context.Context, t *testing.T, wantMessage string) {
+	t.Helper()
+
+	jwtMgr := newJWTManager(t)
+	interceptor := grpcmw.AuthInterceptor(jwtMgr)
+	info := &grpc.UnaryServerInfo{FullMethod: "/grpc.v1.TaskService/GetTask"}
+	capture := &ctxCapture{}
+
+	resp, err := interceptor(ctx, nil, info, capture.handler)
+
+	assert.Nil(t, resp)
+	require.Error(t, err)
+
+	st, ok := status.FromError(err)
+	require.True(t, ok)
+	assert.Equal(t, codes.Unauthenticated, st.Code())
+	assert.Contains(t, st.Message(), wantMessage)
+}
+
 func TestAuthInterceptor_SkipRegister(t *testing.T) {
 	t.Parallel()
 	runSkipAuthTest(t, "/grpc.v1.AuthService/Register")
@@ -114,47 +133,19 @@ func TestAuthInterceptor_MissingAuthorizationToken(t *testing.T) {
 func TestAuthInterceptor_InvalidToken(t *testing.T) {
 	t.Parallel()
 
-	jwtMgr := newJWTManager(t)
-	interceptor := grpcmw.AuthInterceptor(jwtMgr)
-	info := &grpc.UnaryServerInfo{FullMethod: "/grpc.v1.TaskService/GetTask"}
-
 	md := metadata.Pairs("authorization", "Bearer invalid-token")
 	ctx := metadata.NewIncomingContext(t.Context(), md)
 
-	capture := &ctxCapture{}
-
-	resp, err := interceptor(ctx, nil, info, capture.handler)
-
-	assert.Nil(t, resp)
-	require.Error(t, err)
-
-	st, ok := status.FromError(err)
-	require.True(t, ok)
-	assert.Equal(t, codes.Unauthenticated, st.Code())
-	assert.Contains(t, st.Message(), "invalid or expired token")
+	requireUnauthenticated(ctx, t, "invalid or expired token")
 }
 
 func TestAuthInterceptor_InvalidAuthorizationFormat(t *testing.T) {
 	t.Parallel()
 
-	jwtMgr := newJWTManager(t)
-	interceptor := grpcmw.AuthInterceptor(jwtMgr)
-	info := &grpc.UnaryServerInfo{FullMethod: "/grpc.v1.TaskService/GetTask"}
-
 	md := metadata.Pairs("authorization", "invalid-token")
 	ctx := metadata.NewIncomingContext(t.Context(), md)
 
-	capture := &ctxCapture{}
-
-	resp, err := interceptor(ctx, nil, info, capture.handler)
-
-	assert.Nil(t, resp)
-	require.Error(t, err)
-
-	st, ok := status.FromError(err)
-	require.True(t, ok)
-	assert.Equal(t, codes.Unauthenticated, st.Code())
-	assert.Contains(t, st.Message(), "invalid authorization header format")
+	requireUnauthenticated(ctx, t, "invalid authorization header format")
 }
 
 func TestAuthInterceptor_ValidToken(t *testing.T) {

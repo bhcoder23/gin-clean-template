@@ -61,7 +61,7 @@ func New(l logger.Interface, opts ...Option) *Server {
 	}
 
 	mode := normalizeGinMode(s.mode)
-	if s.mode != "" && mode != strings.ToLower(s.mode) {
+	if s.mode != "" && !strings.EqualFold(mode, s.mode) {
 		s.logger.Warn("restapi server - Server - invalid gin mode %q, fallback to %q", s.mode, mode)
 	}
 

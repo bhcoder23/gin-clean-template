@@ -7,6 +7,7 @@ import (
 	"time"
 
 	natsrpc "github.com/bhcoder23/gin-clean-template/pkg/nats/nats_rpc"
+	"github.com/bhcoder23/gin-clean-template/pkg/requestid"
 	"github.com/goccy/go-json"
 	"github.com/nats-io/nats.go"
 )
@@ -66,6 +67,11 @@ func (c *Client) Shutdown() error {
 
 // RemoteCall -.
 func (c *Client) RemoteCall(handler string, request, response any) error {
+	return c.RemoteCallContext(context.Background(), handler, request, response)
+}
+
+// RemoteCallContext sends a request with context metadata propagation.
+func (c *Client) RemoteCallContext(ctx context.Context, handler string, request, response any) error {
 	var (
 		requestBody []byte
 		err         error
@@ -81,7 +87,8 @@ func (c *Client) RemoteCall(handler string, request, response any) error {
 	requestMessage := nats.Msg{
 		Subject: c.subject,
 		Header: nats.Header{
-			"Handler": []string{handler},
+			"Handler":             []string{handler},
+			requestid.MetadataKey: []string{requestIDFromContext(ctx)},
 		},
 		Data: requestBody,
 	}
@@ -95,17 +102,24 @@ func (c *Client) RemoteCall(handler string, request, response any) error {
 		return fmt.Errorf("nats_rpc client - Client - RemoteCall - c.connection.Conn.Request: %w", err)
 	}
 
-	switch message.Header.Get("Status") {
-	case natsrpc.Success:
+	if message.Header.Get("Status") == natsrpc.Success {
 		err = json.Unmarshal(message.Data, &response)
 		if err != nil {
 			return fmt.Errorf("nats_rpc client - Client - RemoteCall - json.Unmarshal: %w", err)
 		}
 	}
 
-	if err = natsrpc.ErrorFromStatus(message.Header.Get("Status")); err != nil {
+	if err := natsrpc.ErrorFromStatus(message.Header.Get("Status"), message.Header.Get(natsrpc.HeaderErrorMessage)); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func requestIDFromContext(ctx context.Context) string {
+	if id, ok := requestid.FromContext(ctx); ok {
+		return id
+	}
+
+	return requestid.New()
 }

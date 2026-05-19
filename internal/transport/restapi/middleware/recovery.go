@@ -6,7 +6,10 @@ import (
 	"runtime/debug"
 	"strings"
 
+	"github.com/bhcoder23/gin-clean-template/internal/apperror"
+	"github.com/bhcoder23/gin-clean-template/internal/transport/restapi/v1/response"
 	"github.com/bhcoder23/gin-clean-template/pkg/logger"
+	"github.com/bhcoder23/gin-clean-template/pkg/requestid"
 	"github.com/gin-gonic/gin"
 )
 
@@ -28,6 +31,13 @@ func buildPanicMessage(ctx *gin.Context, err any) string {
 func Recovery(l logger.Interface) gin.HandlerFunc {
 	return gin.CustomRecovery(func(ctx *gin.Context, recovered any) {
 		l.Error(buildPanicMessage(ctx, recovered))
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, errorResponse{Error: "internal server error"})
+		id, _ := requestid.FromContext(ctx.Request.Context())
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, response.Error{
+			Error: response.ErrorBody{
+				Code:      apperror.CodeInternalServer,
+				Message:   "internal server error",
+				RequestID: id,
+			},
+		})
 	})
 }

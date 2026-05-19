@@ -2,6 +2,7 @@ package restapi_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -9,15 +10,21 @@ import (
 	"time"
 
 	"github.com/bhcoder23/gin-clean-template/config"
+	"github.com/bhcoder23/gin-clean-template/internal/apperror"
 	"github.com/bhcoder23/gin-clean-template/internal/domain"
 	"github.com/bhcoder23/gin-clean-template/internal/transport/restapi"
+	"github.com/bhcoder23/gin-clean-template/internal/transport/restapi/v1/response"
 	"github.com/bhcoder23/gin-clean-template/pkg/jwt"
 	"github.com/bhcoder23/gin-clean-template/pkg/logger"
+	"github.com/bhcoder23/gin-clean-template/pkg/requestid"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 )
 
-var errListShouldNotRun = errors.New("list should not run")
+var (
+	errListShouldNotRun = errors.New("list should not run")
+	errReadiness        = errors.New("database is not ready")
+)
 
 type taskUseCaseStub struct{}
 
@@ -71,9 +78,8 @@ func (taskUseCaseWithListError) Delete(_ context.Context, _, _ string) error {
 	return nil
 }
 
-func TestNewRouterRegistersHealthz(t *testing.T) {
-	t.Parallel()
-
+func newTestRouter(t *testing.T, opts ...restapi.Option) *gin.Engine {
+	t.Helper()
 	gin.SetMode(gin.TestMode)
 
 	app := gin.New()
@@ -81,17 +87,45 @@ func TestNewRouterRegistersHealthz(t *testing.T) {
 	jwtManager := jwt.New("test-secret", time.Hour)
 	l := logger.New("error")
 
-	restapi.NewRouter(app, cfg, nil, nil, nil, jwtManager, l)
+	restapi.NewRouter(app, cfg, nil, nil, nil, jwtManager, l, opts...)
+
+	return app
+}
+
+func getStatus(t *testing.T, app *gin.Engine, path string) int {
+	t.Helper()
 
 	recorder := httptest.NewRecorder()
-	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/healthz", http.NoBody)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, path, http.NoBody)
 
 	app.ServeHTTP(recorder, req)
 
 	resp := recorder.Result()
 	defer resp.Body.Close()
 
-	require.Equal(t, http.StatusOK, resp.StatusCode)
+	return resp.StatusCode
+}
+
+func TestNewRouterRegistersHealthz(t *testing.T) {
+	t.Parallel()
+
+	require.Equal(t, http.StatusOK, getStatus(t, newTestRouter(t), "/healthz"))
+}
+
+func TestNewRouterRegistersReadyz(t *testing.T) {
+	t.Parallel()
+
+	require.Equal(t, http.StatusOK, getStatus(t, newTestRouter(t), "/readyz"))
+}
+
+func TestNewRouterReadyzReturnsUnavailableWhenDependencyFails(t *testing.T) {
+	t.Parallel()
+
+	app := newTestRouter(t, restapi.ReadinessCheck(func(context.Context) error {
+		return errReadiness
+	}))
+
+	require.Equal(t, http.StatusServiceUnavailable, getStatus(t, app, "/readyz"))
 }
 
 func TestNewRouterRegistersTaskCollectionWithoutTrailingSlash(t *testing.T) {
@@ -140,6 +174,7 @@ func TestNewRouterRejectsInvalidTaskPagination(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/v1/tasks?limit=abc", http.NoBody)
 	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set(requestid.Header, "request-abc")
 
 	app.ServeHTTP(recorder, req)
 
@@ -147,4 +182,11 @@ func TestNewRouterRejectsInvalidTaskPagination(t *testing.T) {
 	defer resp.Body.Close()
 
 	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	require.Equal(t, "request-abc", resp.Header.Get(requestid.Header))
+
+	var body response.Error
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+	require.Equal(t, apperror.CodeInvalidRequest, body.Error.Code)
+	require.Equal(t, "invalid limit", body.Error.Message)
+	require.Equal(t, "request-abc", body.Error.RequestID)
 }

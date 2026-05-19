@@ -11,7 +11,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var errRows = errors.New("rows error")
+var (
+	errRows               = errors.New("rows error")
+	errUnexpectedScanDest = errors.New("unexpected scan destination")
+)
 
 type fakeRows struct {
 	index         int
@@ -36,18 +39,10 @@ func (r *fakeRows) FieldDescriptions() []pgconn.FieldDescription {
 
 func (r *fakeRows) Next() bool {
 	if len(r.tasks) > 0 {
-		if r.index < len(r.tasks) {
-			return true
-		}
-
-		return false
+		return r.index < len(r.tasks)
 	}
 
-	if r.index < len(r.notifications) {
-		return true
-	}
-
-	return false
+	return r.index < len(r.notifications)
 }
 
 func (r *fakeRows) Scan(dest ...any) error {
@@ -55,29 +50,82 @@ func (r *fakeRows) Scan(dest ...any) error {
 		task := r.tasks[r.index]
 		r.index++
 
-		*(dest[0].(*string)) = task.ID
-		*(dest[1].(*string)) = task.UserID
-		*(dest[2].(*string)) = task.Title
-		*(dest[3].(*string)) = task.Description
-		*(dest[4].(*domain.TaskStatus)) = task.Status
-		*(dest[5].(*time.Time)) = task.CreatedAt
-		*(dest[6].(*time.Time)) = task.UpdatedAt
-
-		return nil
+		return assignScanDestinations(dest,
+			task.ID,
+			task.UserID,
+			task.Title,
+			task.Description,
+			task.Status,
+			task.CreatedAt,
+			task.UpdatedAt,
+		)
 	}
 
 	notification := r.notifications[r.index]
 	r.index++
 
-	*(dest[0].(*string)) = notification.ID
-	*(dest[1].(*string)) = notification.UserID
-	*(dest[2].(*string)) = notification.TaskID
-	*(dest[3].(*domain.NotificationType)) = notification.Type
-	*(dest[4].(*string)) = notification.Title
-	*(dest[5].(*string)) = notification.Body
-	*(dest[6].(*bool)) = notification.Read
-	*(dest[7].(*time.Time)) = notification.CreatedAt
-	*(dest[8].(**time.Time)) = notification.ReadAt
+	return assignScanDestinations(dest,
+		notification.ID,
+		notification.UserID,
+		notification.TaskID,
+		notification.Type,
+		notification.Title,
+		notification.Body,
+		notification.Read,
+		notification.CreatedAt,
+		notification.ReadAt,
+	)
+}
+
+func assignScanDestinations(dest []any, values ...any) error { //nolint:cyclop,gocognit,gocyclo // fake pgx rows must cover several scan destination types.
+	for i, value := range values {
+		switch typed := dest[i].(type) {
+		case *string:
+			v, ok := value.(string)
+			if !ok {
+				return errUnexpectedScanDest
+			}
+
+			*typed = v
+		case *domain.TaskStatus:
+			v, ok := value.(domain.TaskStatus)
+			if !ok {
+				return errUnexpectedScanDest
+			}
+
+			*typed = v
+		case *domain.NotificationType:
+			v, ok := value.(domain.NotificationType)
+			if !ok {
+				return errUnexpectedScanDest
+			}
+
+			*typed = v
+		case *bool:
+			v, ok := value.(bool)
+			if !ok {
+				return errUnexpectedScanDest
+			}
+
+			*typed = v
+		case *time.Time:
+			v, ok := value.(time.Time)
+			if !ok {
+				return errUnexpectedScanDest
+			}
+
+			*typed = v
+		case **time.Time:
+			v, ok := value.(*time.Time)
+			if !ok {
+				return errUnexpectedScanDest
+			}
+
+			*typed = v
+		default:
+			return errUnexpectedScanDest
+		}
+	}
 
 	return nil
 }

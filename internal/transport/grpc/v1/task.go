@@ -4,9 +4,8 @@ import (
 	"context"
 
 	v1 "github.com/bhcoder23/gin-clean-template/docs/proto/v1"
+	"github.com/bhcoder23/gin-clean-template/internal/apperror"
 	"github.com/bhcoder23/gin-clean-template/internal/domain"
-	"github.com/bhcoder23/gin-clean-template/internal/transport/errlog"
-	"github.com/bhcoder23/gin-clean-template/internal/transport/errmap"
 	grpcmw "github.com/bhcoder23/gin-clean-template/internal/transport/grpc/middleware"
 	"github.com/bhcoder23/gin-clean-template/internal/transport/grpc/v1/response"
 	"google.golang.org/grpc/codes"
@@ -22,8 +21,9 @@ func (c *TaskController) CreateTask(ctx context.Context, req *v1.CreateTaskReque
 
 	task, err := c.tk.Create(ctx, userID, req.GetTitle(), req.GetDescription())
 	if err != nil {
-		errlog.Log(c.l, err, "grpc - v1 - CreateTask")
-		return nil, errmap.GRPC(err)
+		apperror.Log(c.l, err, "grpc - v1 - CreateTask")
+
+		return nil, apperror.GRPC(err)
 	}
 
 	return response.NewTaskResponse(&task), nil
@@ -38,8 +38,9 @@ func (c *TaskController) GetTask(ctx context.Context, req *v1.GetTaskRequest) (*
 
 	task, err := c.tk.Get(ctx, userID, req.GetId())
 	if err != nil {
-		errlog.Log(c.l, err, "grpc - v1 - GetTask")
-		return nil, errmap.GRPC(err)
+		apperror.Log(c.l, err, "grpc - v1 - GetTask")
+
+		return nil, apperror.GRPC(err)
 	}
 
 	return response.NewTaskResponse(&task), nil
@@ -65,7 +66,7 @@ func (c *TaskController) ListTasks(ctx context.Context, req *v1.ListTasksRequest
 
 	tasks, total, err := c.tk.List(ctx, userID, statusFilter, req.GetQuery(), int(req.GetLimit()), int(req.GetOffset()))
 	if err != nil {
-		errlog.Log(c.l, err, "grpc - v1 - ListTasks")
+		apperror.Log(c.l, err, "grpc - v1 - ListTasks")
 
 		return nil, status.Error(codes.Internal, "internal server error")
 	}
@@ -75,31 +76,29 @@ func (c *TaskController) ListTasks(ctx context.Context, req *v1.ListTasksRequest
 
 // UpdateTask -.
 func (c *TaskController) UpdateTask(ctx context.Context, req *v1.UpdateTaskRequest) (*v1.TaskResponse, error) {
-	userID, ok := grpcmw.UserIDFromContext(ctx)
-	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "unauthorized")
-	}
-
-	task, err := c.tk.Update(ctx, userID, req.GetId(), req.GetTitle(), req.GetDescription())
-	if err != nil {
-		errlog.Log(c.l, err, "grpc - v1 - UpdateTask")
-		return nil, errmap.GRPC(err)
-	}
-
-	return response.NewTaskResponse(&task), nil
+	return c.writeTaskResponse(ctx, "grpc - v1 - UpdateTask", func(userID string) (domain.Task, error) {
+		return c.tk.Update(ctx, userID, req.GetId(), req.GetTitle(), req.GetDescription())
+	})
 }
 
 // TransitionTask -.
 func (c *TaskController) TransitionTask(ctx context.Context, req *v1.TransitionTaskRequest) (*v1.TaskResponse, error) {
+	return c.writeTaskResponse(ctx, "grpc - v1 - TransitionTask", func(userID string) (domain.Task, error) {
+		return c.tk.Transition(ctx, userID, req.GetId(), domain.TaskStatus(req.GetStatus()))
+	})
+}
+
+func (c *TaskController) writeTaskResponse(ctx context.Context, logMessage string, write func(string) (domain.Task, error)) (*v1.TaskResponse, error) {
 	userID, ok := grpcmw.UserIDFromContext(ctx)
 	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "unauthorized")
 	}
 
-	task, err := c.tk.Transition(ctx, userID, req.GetId(), domain.TaskStatus(req.GetStatus()))
+	task, err := write(userID)
 	if err != nil {
-		errlog.Log(c.l, err, "grpc - v1 - TransitionTask")
-		return nil, errmap.GRPC(err)
+		apperror.Log(c.l, err, logMessage)
+
+		return nil, apperror.GRPC(err)
 	}
 
 	return response.NewTaskResponse(&task), nil
@@ -114,8 +113,9 @@ func (c *TaskController) DeleteTask(ctx context.Context, req *v1.DeleteTaskReque
 
 	err := c.tk.Delete(ctx, userID, req.GetId())
 	if err != nil {
-		errlog.Log(c.l, err, "grpc - v1 - DeleteTask")
-		return nil, errmap.GRPC(err)
+		apperror.Log(c.l, err, "grpc - v1 - DeleteTask")
+
+		return nil, apperror.GRPC(err)
 	}
 
 	return &v1.DeleteTaskResponse{}, nil

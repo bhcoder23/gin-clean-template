@@ -9,6 +9,7 @@ import (
 
 	"github.com/bhcoder23/gin-clean-template/pkg/logger"
 	natsrpc "github.com/bhcoder23/gin-clean-template/pkg/nats/nats_rpc"
+	"github.com/bhcoder23/gin-clean-template/pkg/requestid"
 	"github.com/goccy/go-json"
 	"github.com/nats-io/nats.go"
 	"golang.org/x/sync/errgroup"
@@ -21,7 +22,7 @@ const (
 )
 
 // CallHandler -.
-type CallHandler func(*nats.Msg) (any, error)
+type CallHandler func(context.Context, *nats.Msg) (any, error)
 
 // Server -.
 type Server struct {
@@ -155,24 +156,29 @@ func (s *Server) handleMessage(msg *nats.Msg) {
 
 	callHandler, ok := s.router[handler]
 	if !ok {
-		s.publish(msg, nil, natsrpc.ErrBadHandler.Error())
+		s.publish(msg, nil, natsrpc.CodeBadHandler, natsrpc.ErrBadHandler.Error())
 
 		return
 	}
 
-	response, err := callHandler(msg)
+	ctx, cancel := context.WithTimeout(s.ctx, s.timeout)
+	defer cancel()
+
+	ctx = requestid.WithContext(ctx, requestid.Normalize(msg.Header.Get(requestid.MetadataKey)))
+
+	response, err := callHandler(ctx, msg)
 	if err != nil {
-		status := natsrpc.ErrInternalServer.Error()
-		if natsrpc.IsKnownStatus(err.Error()) {
-			status = err.Error()
+		rpcErr := natsrpc.ErrorFromError(err)
+
+		s.publish(msg, nil, rpcErr.Code, rpcErr.Message)
+
+		if rpcErr.Code == natsrpc.CodeInternalServer {
+			s.logger.Error(err, "nats_rpc server - Server - handleMessage - callHandler")
+
+			return
 		}
 
-		s.publish(msg, nil, status)
-		if natsrpc.IsKnownStatus(status) {
-			s.logger.Warn(err, "nats_rpc server - Server - handleMessage - callHandler")
-		} else {
-			s.logger.Error(err, "nats_rpc server - Server - handleMessage - callHandler")
-		}
+		s.logger.Warn(err, "nats_rpc server - Server - handleMessage - callHandler")
 
 		return
 	}
@@ -181,17 +187,23 @@ func (s *Server) handleMessage(msg *nats.Msg) {
 	if err != nil {
 		s.logger.Error(err, "nats_rpc server - Server - handleMessage - json.Marshal")
 
-		s.publish(msg, nil, natsrpc.ErrInternalServer.Error())
+		s.publish(msg, nil, natsrpc.CodeInternalServer, natsrpc.ErrInternalServer.Error())
 
 		return
 	}
 
-	s.publish(msg, body, natsrpc.Success)
+	s.publish(msg, body, natsrpc.Success, "")
 }
 
-func (s *Server) publish(msg *nats.Msg, body []byte, status string) {
+func (s *Server) publish(msg *nats.Msg, body []byte, status, message string) {
 	respondMsg := nats.NewMsg(msg.Reply)
 	respondMsg.Header.Set("Status", status)
+
+	if message != "" {
+		respondMsg.Header.Set(natsrpc.HeaderErrorMessage, message)
+	}
+
+	respondMsg.Header.Set(requestid.MetadataKey, requestid.Normalize(msg.Header.Get(requestid.MetadataKey)))
 	respondMsg.Data = body
 
 	err := s.connection.PublishMsg(respondMsg)

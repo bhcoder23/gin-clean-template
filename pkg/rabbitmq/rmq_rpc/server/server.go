@@ -9,6 +9,7 @@ import (
 
 	"github.com/bhcoder23/gin-clean-template/pkg/logger"
 	rmqrpc "github.com/bhcoder23/gin-clean-template/pkg/rabbitmq/rmq_rpc"
+	"github.com/bhcoder23/gin-clean-template/pkg/requestid"
 	"github.com/goccy/go-json"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"golang.org/x/sync/errgroup"
@@ -21,7 +22,7 @@ const (
 )
 
 // CallHandler -.
-type CallHandler func(*amqp.Delivery) (any, error)
+type CallHandler func(context.Context, *amqp.Delivery) (any, error)
 
 // Server -.
 type Server struct {
@@ -47,6 +48,7 @@ func New(url, serverExchange string, router map[string]CallHandler, l logger.Int
 		URL:      url,
 		WaitTime: _defaultWaitTime,
 		Attempts: _defaultAttempts,
+		Logger:   l,
 	}
 
 	s := &Server{
@@ -155,34 +157,48 @@ func (s *Server) serveCall(d *amqp.Delivery) {
 
 	callHandler, ok := s.router[d.Type]
 	if !ok {
-		s.publish(d, nil, rmqrpc.ErrBadHandler.Error())
+		s.publish(d, nil, rmqrpc.CodeBadHandler, rmqrpc.ErrBadHandler.Error())
 
 		return
 	}
 
-	response, err := callHandler(d)
+	ctx, cancel := context.WithTimeout(s.ctx, s.timeout)
+	defer cancel()
+
+	ctx = requestid.WithContext(ctx, requestIDFromDelivery(d))
+
+	response, err := callHandler(ctx, d)
 	if err != nil {
-		status := rmqrpc.ErrInternalServer.Error()
-		if rmqrpc.IsKnownStatus(err.Error()) {
-			status = err.Error()
+		rpcErr := rmqrpc.ErrorFromError(err)
+
+		s.publish(d, nil, rpcErr.Code, rpcErr.Message)
+
+		if rpcErr.Code == rmqrpc.CodeInternalServer {
+			s.logger.Error(err, "rmq_rpc server - Server - serveCall - callHandler")
+
+			return
 		}
 
-		s.publish(d, nil, status)
-		if rmqrpc.IsKnownStatus(status) {
-			s.logger.Warn(err, "rmq_rpc server - Server - serveCall - callHandler")
-		} else {
-			s.logger.Error(err, "rmq_rpc server - Server - serveCall - callHandler")
-		}
+		s.logger.Warn(err, "rmq_rpc server - Server - serveCall - callHandler")
 
 		return
 	}
 
-	body, err := json.Marshal(response)
+	body, status, message, err := encodeResponse(response)
 	if err != nil {
 		s.logger.Error(err, "rmq_rpc server - Server - serveCall - json.Marshal")
 	}
 
-	s.publish(d, body, rmqrpc.Success)
+	s.publish(d, body, status, message)
+}
+
+func encodeResponse(response any) (body []byte, status, message string, err error) {
+	body, err = json.Marshal(response)
+	if err != nil {
+		return nil, rmqrpc.CodeInternalServer, rmqrpc.ErrInternalServer.Error(), err
+	}
+
+	return body, rmqrpc.Success, "", nil
 }
 
 func (s *Server) ack(d *amqp.Delivery, multiple bool) {
@@ -192,7 +208,7 @@ func (s *Server) ack(d *amqp.Delivery, multiple bool) {
 	}
 }
 
-func (s *Server) publish(d *amqp.Delivery, body []byte, status string) {
+func (s *Server) publish(d *amqp.Delivery, body []byte, status, message string) {
 	err := s.conn.Channel.Publish(
 		d.ReplyTo,
 		"",
@@ -201,6 +217,7 @@ func (s *Server) publish(d *amqp.Delivery, body []byte, status string) {
 		amqp.Publishing{
 			ContentType:   "application/json",
 			CorrelationId: d.CorrelationId,
+			Headers:       responseHeaders(d, message),
 			Type:          status,
 			Body:          body,
 		},
@@ -208,4 +225,27 @@ func (s *Server) publish(d *amqp.Delivery, body []byte, status string) {
 	if err != nil {
 		s.logger.Error(err, "rmq_rpc server - Server - publish - s.conn.Channel.Publish")
 	}
+}
+
+func responseHeaders(d *amqp.Delivery, message string) amqp.Table {
+	headers := requestIDHeaders(d)
+	if message != "" {
+		headers[rmqrpc.HeaderErrorMessage] = message
+	}
+
+	return headers
+}
+
+func requestIDFromDelivery(d *amqp.Delivery) string {
+	if d.Headers != nil {
+		if value, ok := d.Headers[requestid.MetadataKey].(string); ok {
+			return requestid.Normalize(value)
+		}
+	}
+
+	return requestid.Normalize(d.CorrelationId)
+}
+
+func requestIDHeaders(d *amqp.Delivery) amqp.Table {
+	return amqp.Table{requestid.MetadataKey: requestIDFromDelivery(d)}
 }

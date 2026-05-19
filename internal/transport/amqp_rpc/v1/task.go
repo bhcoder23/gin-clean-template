@@ -3,18 +3,17 @@ package v1
 import (
 	"context"
 
+	"github.com/bhcoder23/gin-clean-template/internal/apperror"
 	"github.com/bhcoder23/gin-clean-template/internal/domain"
 	"github.com/bhcoder23/gin-clean-template/internal/transport/amqp_rpc/v1/request"
 	"github.com/bhcoder23/gin-clean-template/internal/transport/amqp_rpc/v1/response"
-	"github.com/bhcoder23/gin-clean-template/internal/transport/errlog"
-	"github.com/bhcoder23/gin-clean-template/internal/transport/rpcerror"
 	"github.com/bhcoder23/gin-clean-template/pkg/rabbitmq/rmq_rpc/server"
 	"github.com/goccy/go-json"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 func (r *V1) createTask() server.CallHandler {
-	return func(d *amqp.Delivery) (any, error) {
+	return func(ctx context.Context, d *amqp.Delivery) (any, error) {
 		userID, data, err := extractUserID(d, r.j)
 		if err != nil {
 			return nil, err
@@ -24,18 +23,18 @@ func (r *V1) createTask() server.CallHandler {
 
 		err = json.Unmarshal(data, &req)
 		if err != nil {
-			return nil, rpcerror.ErrInvalidRequest
+			return nil, apperror.RPC(apperror.ErrInvalidRequest)
 		}
 
 		if err = r.v.Struct(req); err != nil {
-			return nil, rpcerror.ErrInvalidRequest
+			return nil, apperror.RPC(apperror.ErrInvalidRequest)
 		}
 
-		task, err := r.tk.Create(context.Background(), userID, req.Title, req.Description)
+		task, err := r.tk.Create(ctx, userID, req.Title, req.Description)
 		if err != nil {
-			errlog.Log(r.l, err, "amqp_rpc - V1 - createTask")
+			apperror.Log(r.l, err, "amqp_rpc - V1 - createTask")
 
-			return nil, rpcerror.Normalize(err)
+			return nil, apperror.RPC(err)
 		}
 
 		return task, nil
@@ -43,7 +42,7 @@ func (r *V1) createTask() server.CallHandler {
 }
 
 func (r *V1) getTask() server.CallHandler {
-	return func(d *amqp.Delivery) (any, error) {
+	return func(ctx context.Context, d *amqp.Delivery) (any, error) {
 		userID, data, err := extractUserID(d, r.j)
 		if err != nil {
 			return nil, err
@@ -53,18 +52,18 @@ func (r *V1) getTask() server.CallHandler {
 
 		err = json.Unmarshal(data, &req)
 		if err != nil {
-			return nil, rpcerror.ErrInvalidRequest
+			return nil, apperror.RPC(apperror.ErrInvalidRequest)
 		}
 
 		if err = r.v.Struct(req); err != nil {
-			return nil, rpcerror.ErrInvalidRequest
+			return nil, apperror.RPC(apperror.ErrInvalidRequest)
 		}
 
-		task, err := r.tk.Get(context.Background(), userID, req.ID)
+		task, err := r.tk.Get(ctx, userID, req.ID)
 		if err != nil {
-			errlog.Log(r.l, err, "amqp_rpc - V1 - getTask")
+			apperror.Log(r.l, err, "amqp_rpc - V1 - getTask")
 
-			return nil, rpcerror.Normalize(err)
+			return nil, apperror.RPC(err)
 		}
 
 		return task, nil
@@ -72,7 +71,7 @@ func (r *V1) getTask() server.CallHandler {
 }
 
 func (r *V1) listTasks() server.CallHandler {
-	return func(d *amqp.Delivery) (any, error) {
+	return func(ctx context.Context, d *amqp.Delivery) (any, error) {
 		userID, data, err := extractUserID(d, r.j)
 		if err != nil {
 			return nil, err
@@ -82,11 +81,11 @@ func (r *V1) listTasks() server.CallHandler {
 
 		err = json.Unmarshal(data, &req)
 		if err != nil {
-			return nil, rpcerror.ErrInvalidRequest
+			return nil, apperror.RPC(apperror.ErrInvalidRequest)
 		}
 
 		if err = r.v.Struct(req); err != nil {
-			return nil, rpcerror.ErrInvalidRequest
+			return nil, apperror.RPC(apperror.ErrInvalidRequest)
 		}
 
 		var status *domain.TaskStatus
@@ -96,11 +95,11 @@ func (r *V1) listTasks() server.CallHandler {
 			status = &s
 		}
 
-		tasks, total, err := r.tk.List(context.Background(), userID, status, req.Query, req.Limit, req.Offset)
+		tasks, total, err := r.tk.List(ctx, userID, status, req.Query, req.Limit, req.Offset)
 		if err != nil {
-			errlog.Log(r.l, err, "amqp_rpc - V1 - listTasks")
+			apperror.Log(r.l, err, "amqp_rpc - V1 - listTasks")
 
-			return nil, rpcerror.Normalize(err)
+			return nil, apperror.RPC(err)
 		}
 
 		return response.TaskList{Tasks: tasks, Total: total}, nil
@@ -108,7 +107,7 @@ func (r *V1) listTasks() server.CallHandler {
 }
 
 func (r *V1) updateTask() server.CallHandler {
-	return func(d *amqp.Delivery) (any, error) {
+	return func(ctx context.Context, d *amqp.Delivery) (any, error) {
 		userID, data, err := extractUserID(d, r.j)
 		if err != nil {
 			return nil, err
@@ -118,18 +117,18 @@ func (r *V1) updateTask() server.CallHandler {
 
 		err = json.Unmarshal(data, &req)
 		if err != nil {
-			return nil, rpcerror.ErrInvalidRequest
+			return nil, apperror.RPC(apperror.ErrInvalidRequest)
 		}
 
 		if err = r.v.Struct(req); err != nil {
-			return nil, rpcerror.ErrInvalidRequest
+			return nil, apperror.RPC(apperror.ErrInvalidRequest)
 		}
 
-		task, err := r.tk.Update(context.Background(), userID, req.ID, req.Title, req.Description)
+		task, err := r.tk.Update(ctx, userID, req.ID, req.Title, req.Description)
 		if err != nil {
-			errlog.Log(r.l, err, "amqp_rpc - V1 - updateTask")
+			apperror.Log(r.l, err, "amqp_rpc - V1 - updateTask")
 
-			return nil, rpcerror.Normalize(err)
+			return nil, apperror.RPC(err)
 		}
 
 		return task, nil
@@ -137,7 +136,7 @@ func (r *V1) updateTask() server.CallHandler {
 }
 
 func (r *V1) transitionTask() server.CallHandler {
-	return func(d *amqp.Delivery) (any, error) {
+	return func(ctx context.Context, d *amqp.Delivery) (any, error) {
 		userID, data, err := extractUserID(d, r.j)
 		if err != nil {
 			return nil, err
@@ -147,18 +146,18 @@ func (r *V1) transitionTask() server.CallHandler {
 
 		err = json.Unmarshal(data, &req)
 		if err != nil {
-			return nil, rpcerror.ErrInvalidRequest
+			return nil, apperror.RPC(apperror.ErrInvalidRequest)
 		}
 
 		if err = r.v.Struct(req); err != nil {
-			return nil, rpcerror.ErrInvalidRequest
+			return nil, apperror.RPC(apperror.ErrInvalidRequest)
 		}
 
-		task, err := r.tk.Transition(context.Background(), userID, req.ID, domain.TaskStatus(req.Status))
+		task, err := r.tk.Transition(ctx, userID, req.ID, domain.TaskStatus(req.Status))
 		if err != nil {
-			errlog.Log(r.l, err, "amqp_rpc - V1 - transitionTask")
+			apperror.Log(r.l, err, "amqp_rpc - V1 - transitionTask")
 
-			return nil, rpcerror.Normalize(err)
+			return nil, apperror.RPC(err)
 		}
 
 		return task, nil
@@ -166,7 +165,7 @@ func (r *V1) transitionTask() server.CallHandler {
 }
 
 func (r *V1) deleteTask() server.CallHandler {
-	return func(d *amqp.Delivery) (any, error) {
+	return func(ctx context.Context, d *amqp.Delivery) (any, error) {
 		userID, data, err := extractUserID(d, r.j)
 		if err != nil {
 			return nil, err
@@ -176,18 +175,18 @@ func (r *V1) deleteTask() server.CallHandler {
 
 		err = json.Unmarshal(data, &req)
 		if err != nil {
-			return nil, rpcerror.ErrInvalidRequest
+			return nil, apperror.RPC(apperror.ErrInvalidRequest)
 		}
 
 		if err = r.v.Struct(req); err != nil {
-			return nil, rpcerror.ErrInvalidRequest
+			return nil, apperror.RPC(apperror.ErrInvalidRequest)
 		}
 
-		err = r.tk.Delete(context.Background(), userID, req.ID)
+		err = r.tk.Delete(ctx, userID, req.ID)
 		if err != nil {
-			errlog.Log(r.l, err, "amqp_rpc - V1 - deleteTask")
+			apperror.Log(r.l, err, "amqp_rpc - V1 - deleteTask")
 
-			return nil, rpcerror.Normalize(err)
+			return nil, apperror.RPC(err)
 		}
 
 		return response.DeleteStatus{Status: "deleted"}, nil

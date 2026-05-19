@@ -15,6 +15,7 @@ x-backend-app-environment: &x-backend-app-environment
   # App
   APP_NAME: "gin-clean-template"
   APP_VERSION: "1.0.0"
+  APP_ENV: "local"
   # Transports
   HTTP_ENABLED: "true"
   GRPC_ENABLED: "true"
@@ -40,6 +41,20 @@ x-backend-app-environment: &x-backend-app-environment
   METRICS_ENABLED: "true"
   # Swagger
   SWAGGER_ENABLED: "true"
+  # Trace
+  TRACE_ENABLED: "false"
+  TRACE_EXPORTER: "stdout"
+  TRACE_SERVICE_NAME: "gin-clean-template"
+  # Outbox
+  OUTBOX_ENABLED: "false"
+  OUTBOX_PUBLISHER: "nats"
+  OUTBOX_NATS_URL: ""
+  OUTBOX_SUBJECT_PREFIX: "events"
+  OUTBOX_POLL_INTERVAL: "1s"
+  OUTBOX_BATCH_SIZE: "20"
+  OUTBOX_MAX_ATTEMPTS: "10"
+  OUTBOX_LOCK_TIMEOUT: "5m"
+  OUTBOX_PUBLISH_TIMEOUT: "5s"
   # JWT
   JWT_TOKEN_EXPIRY: "24h"
   JWT_SECRET: "your-secret-key-change-in-production"
@@ -109,7 +124,6 @@ services:
 
   app:
     container_name: app
-    platform: linux/amd64
     pid: "host"
     build:
       context: .
@@ -126,7 +140,7 @@ services:
       nats:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8080/healthz" ]
+      test: [ "CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8080/readyz" ]
       interval: 5s
       timeout: 5s
       retries: 10

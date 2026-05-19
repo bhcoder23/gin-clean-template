@@ -40,7 +40,7 @@
 - gRPC（基于 protobuf 的 [gRPC](https://grpc.io/) 框架）
 - REST API（基于 [Gin](https://github.com/gin-gonic/gin) 框架）
 
-默认本地开发路径会把四种演示 transport 全部打开，让脚手架开箱就能展示完整形态。派生项目仍然应该只保留自己真正需要的 adapter。
+默认本地开发路径只启动 HTTP。其他 transport 仍然作为可选 adapter 保留，派生项目可以按需打开，不必一开始就背上所有依赖。
 
 模板包含三个领域，用于演示多服务架构。
 它们是脚手架示例领域，并不是必须保留的产品边界：
@@ -63,15 +63,17 @@
 
 ## 从这里开始
 
-第一次体验建议直接走完整演示路径，这样最容易看懂模板到底在展示什么：
+第一次体验建议走 HTTP-first 路径，这样更容易看清脚手架骨架，也方便后续裁剪：
 
 ```sh
-# 启动 PostgreSQL、RabbitMQ、NATS
+# 启动 PostgreSQL、RabbitMQ、NATS，便于本地实验
 make compose-up
 
-# 执行迁移并启动 REST、gRPC、AMQP RPC、NATS RPC
+# 执行迁移并启动当前启用的 transport
 make run
 ```
+
+如果要一次查看所有演示 adapter，可以使用 `make run-all-transports`。
 
 服务起来后，最快理解这个脚手架的方式，就是顺着一条完整的 REST 业务链路走一遍。
 
@@ -177,7 +179,7 @@ CRUD 操作，支持状态状态机。
 
 ### Local development
 
-Docker 不是必选项。默认本地路径就是完整演示路径，所以 `.env.example` 默认开启 HTTP、gRPC、RabbitMQ RPC、NATS RPC。
+Docker 不是必选项。`.env.example` 默认只开启 HTTP；gRPC、RabbitMQ RPC、NATS RPC 都是可选项。Docker Compose 演示栈会在需要完整 adapter 集合时显式打开这些开关。
 
 ```sh
 # 完整演示默认需要 PostgreSQL、RabbitMQ、NATS
@@ -216,6 +218,7 @@ make compose-up-all
   - Server Exchange: `rpc_server`
 - REST API:
   - http://app.lvh.me/healthz | http://127.0.0.1:8080/healthz
+  - http://app.lvh.me/readyz | http://127.0.0.1:8080/readyz
   - http://app.lvh.me/metrics | http://127.0.0.1:8080/metrics
   - http://app.lvh.me/swagger | http://127.0.0.1:8080/swagger
 - gRPC:
@@ -251,9 +254,25 @@ make compose-up-all
 默认本地 transport 开关：
 
 - `HTTP_ENABLED=true`
-- `GRPC_ENABLED=true`
-- `RMQ_ENABLED=true`
-- `NATS_ENABLED=true`
+- `GRPC_ENABLED=false`
+- `RMQ_ENABLED=false`
+- `NATS_ENABLED=false`
+
+`APP_ENV=production` 会开启额外防呆：Swagger 必须关闭，示例 JWT 密钥必须替换。
+
+请求关联 ID 是基础脚手架能力：
+
+- HTTP 读取并写回 `X-Request-ID`。
+- gRPC、AMQP RPC、NATS RPC 使用 `x-request-id` metadata/header 传递。
+- REST 错误响应包含 `request_id`，方便把客户端错误和服务端日志串起来。
+
+可选 trace 默认关闭：
+
+- `TRACE_ENABLED=false`
+- `TRACE_EXPORTER=stdout`
+- `TRACE_SERVICE_NAME=gin-clean-template`
+
+stdout exporter 是一个真实可运行的绑定，方便本地验证链路。派生项目可以替换成 OTLP/collector 接入，不需要改 handler 或 usecase。
 
 [docker-compose.yml](docker-compose.yml) 使用 `env` 變數來配置服務。
 
@@ -531,6 +550,37 @@ HTTP 和数据库都在外层，这意味着它们彼此无法感知。
   与业务逻辑直接交互的层通常称为_infrastructure_ 层
   这些可以是 `internal/infra/persistence` 中的持久化实现、`pkg` 中的技术组件以及其他集成适配器。
   在模板中，_infrastructure_ 包位于 `internal/infra` 中
+
+对于跨 repository 写入，持久层提供了轻量事务模板，而不是要求使用 ORM：
+
+- `persistence.NewStores(pg)` 创建基于普通连接池的 repository。
+- `persistence.NewTransactor(pg).WithinTx(ctx, fn)` 创建基于同一个 `pgx` 事务的 repository。
+- repository 依赖最小的 `postgres.Executor` 接口，所以同一套 repository 可以跑在连接池或事务上。
+
+这是脚手架扩展点。简单的单 repository demo usecase 可以直接调用 repository；需要多表原子更新的流程应使用 `WithinTx`，同时不把 `pgx.Tx` 泄漏到 `internal/usecase`。task 示例在写 task 和 notification 时已经演示这个事务边界。
+
+REST 错误使用稳定 envelope：
+
+```json
+{
+  "error": {
+    "code": "TASK_NOT_FOUND",
+    "message": "task not found",
+    "request_id": "..."
+  }
+}
+```
+
+映射集中在 `internal/apperror`，思路接近 Kratos 的 `code`/`reason` 拆分：协议状态码仍然表达 HTTP/gRPC 语义，字符串 `code` 作为稳定的客户端错误原因。示例中的 domain error 放在对应模型文件旁边；跨 REST/gRPC/AMQP/NATS 的错误映射和预期错误日志分级都由 `apperror` 统一处理，避免 transport 层复制多套错误工具。
+
+事件发布提供了接近生产形态的 transactional outbox 示例：
+
+- 通过 migration 创建 `outbox_events` 表
+- `outbox.Store` 支持事务内写入、原子 claim pending 事件和 stale publishing lock 回收
+- `outbox.Relay` 支持重试、lock timeout、单次 publish timeout 和失败记录
+- `outbox.NATSPublisher` 是默认的具体 publisher 绑定，并做 client-side flush
+
+默认通过 `OUTBOX_ENABLED=false` 关闭。启用 `OUTBOX_PUBLISHER=nats` 后，relay 会发布到 `OUTBOX_SUBJECT_PREFIX + "." + event_type`。当业务需要 DB + outbox 一致性时，应在同一个 `WithinTx` 回调里通过事务 `StoreProvider` 暴露的 `OutboxStore` port 写业务数据和 outbox 事件。Core NATS publish + flush 只能确认客户端把消息交给服务端连接，不是 durable broker ack；如果业务事件必须抵抗 broker 侧故障，应替换为 JetStream、Kafka、RabbitMQ confirms 或其他 durable publisher。
 
 您可以根据需要决定你要调用的入口点，包括：
 
