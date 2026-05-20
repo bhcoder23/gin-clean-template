@@ -36,7 +36,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/v1.Login"
+                            "$ref": "#/definitions/v1.LoginReq"
                         }
                     }
                 ],
@@ -44,7 +44,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/v1.Token"
+                            "$ref": "#/definitions/v1.TokenResp"
                         }
                     },
                     "400": {
@@ -89,7 +89,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/v1.Register"
+                            "$ref": "#/definitions/v1.RegisterReq"
                         }
                     }
                 ],
@@ -97,7 +97,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/domain.User"
+                            "$ref": "#/definitions/v1.UserResp"
                         }
                     },
                     "400": {
@@ -158,7 +158,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.NotificationList"
+                            "$ref": "#/definitions/v1.ListNotificationsResp"
                         }
                     },
                     "400": {
@@ -211,7 +211,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.Notification"
+                            "$ref": "#/definitions/v1.NotificationResp"
                         }
                     },
                     "401": {
@@ -288,7 +288,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/v1.TaskList"
+                            "$ref": "#/definitions/v1.ListTasksResp"
                         }
                     },
                     "400": {
@@ -336,7 +336,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/v1.CreateTask"
+                            "$ref": "#/definitions/v1.CreateTaskReq"
                         }
                     }
                 ],
@@ -344,7 +344,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/domain.Task"
+                            "$ref": "#/definitions/v1.TaskResp"
                         }
                     },
                     "400": {
@@ -397,7 +397,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.Task"
+                            "$ref": "#/definitions/v1.TaskResp"
                         }
                     },
                     "401": {
@@ -452,7 +452,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/v1.UpdateTask"
+                            "$ref": "#/definitions/v1.UpdateTaskReq"
                         }
                     }
                 ],
@@ -460,7 +460,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.Task"
+                            "$ref": "#/definitions/v1.TaskResp"
                         }
                     },
                     "400": {
@@ -568,7 +568,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/v1.TransitionTask"
+                            "$ref": "#/definitions/v1.TransitionTaskReq"
                         }
                     }
                 ],
@@ -576,7 +576,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.Task"
+                            "$ref": "#/definitions/v1.TaskResp"
                         }
                     },
                     "400": {
@@ -626,7 +626,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.User"
+                            "$ref": "#/definitions/v1.UserResp"
                         }
                     },
                     "401": {
@@ -657,12 +657,102 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "domain.Notification": {
+        "v1.CreateTaskReq": {
+            "type": "object",
+            "required": [
+                "title"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "maxLength": 1000,
+                    "example": "Task description"
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "example": "My task"
+                }
+            }
+        },
+        "v1.Error": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "$ref": "#/definitions/v1.ErrorBody"
+                }
+            }
+        },
+        "v1.ErrorBody": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "TASK_NOT_FOUND"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "task not found"
+                },
+                "request_id": {
+                    "type": "string",
+                    "example": "request-id"
+                }
+            }
+        },
+        "v1.ListNotificationsResp": {
+            "type": "object",
+            "properties": {
+                "notifications": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/v1.NotificationResp"
+                    }
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 42
+                }
+            }
+        },
+        "v1.ListTasksResp": {
+            "type": "object",
+            "properties": {
+                "tasks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/v1.TaskResp"
+                    }
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 42
+                }
+            }
+        },
+        "v1.LoginReq": {
+            "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "john@example.com"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "secret123"
+                }
+            }
+        },
+        "v1.NotificationResp": {
             "type": "object",
             "properties": {
                 "body": {
                     "type": "string",
-                    "example": "Task \"Ship the scaffold\" was created."
+                    "example": "Task was created."
                 },
                 "created_at": {
                     "type": "string",
@@ -689,11 +779,7 @@ const docTemplate = `{
                     "example": "Task created"
                 },
                 "type": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/domain.NotificationType"
-                        }
-                    ],
+                    "type": "string",
                     "example": "task_created"
                 },
                 "user_id": {
@@ -702,151 +788,7 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.NotificationList": {
-            "type": "object",
-            "properties": {
-                "notifications": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/domain.Notification"
-                    }
-                },
-                "total": {
-                    "type": "integer"
-                }
-            }
-        },
-        "domain.NotificationType": {
-            "type": "string",
-            "enum": [
-                "task_created",
-                "task_status_changed"
-            ],
-            "x-enum-varnames": [
-                "NotificationTypeTaskCreated",
-                "NotificationTypeTaskStatusChanged"
-            ]
-        },
-        "domain.Task": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string",
-                    "example": "2026-01-01T00:00:00Z"
-                },
-                "description": {
-                    "type": "string",
-                    "example": "Task description"
-                },
-                "id": {
-                    "type": "string",
-                    "example": "550e8400-e29b-41d4-a716-446655440000"
-                },
-                "status": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/domain.TaskStatus"
-                        }
-                    ],
-                    "example": "todo"
-                },
-                "title": {
-                    "type": "string",
-                    "example": "My task"
-                },
-                "updated_at": {
-                    "type": "string",
-                    "example": "2026-01-01T00:00:00Z"
-                },
-                "user_id": {
-                    "type": "string",
-                    "example": "550e8400-e29b-41d4-a716-446655440000"
-                }
-            }
-        },
-        "domain.TaskStatus": {
-            "type": "string",
-            "enum": [
-                "todo",
-                "in_progress",
-                "done"
-            ],
-            "x-enum-varnames": [
-                "TaskStatusTodo",
-                "TaskStatusInProgress",
-                "TaskStatusDone"
-            ]
-        },
-        "domain.User": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string",
-                    "example": "2026-01-01T00:00:00Z"
-                },
-                "email": {
-                    "type": "string",
-                    "example": "john@example.com"
-                },
-                "id": {
-                    "type": "string",
-                    "example": "550e8400-e29b-41d4-a716-446655440000"
-                },
-                "updated_at": {
-                    "type": "string",
-                    "example": "2026-01-01T00:00:00Z"
-                },
-                "username": {
-                    "type": "string",
-                    "example": "johndoe"
-                }
-            }
-        },
-        "v1.CreateTask": {
-            "type": "object",
-            "required": [
-                "title"
-            ],
-            "properties": {
-                "description": {
-                    "type": "string",
-                    "maxLength": 1000,
-                    "example": "Task description"
-                },
-                "title": {
-                    "type": "string",
-                    "maxLength": 255,
-                    "example": "My task"
-                }
-            }
-        },
-        "v1.Error": {
-            "type": "object",
-            "properties": {
-                "error": {
-                    "type": "string",
-                    "example": "message"
-                }
-            }
-        },
-        "v1.Login": {
-            "type": "object",
-            "required": [
-                "email",
-                "password"
-            ],
-            "properties": {
-                "email": {
-                    "type": "string",
-                    "example": "john@example.com"
-                },
-                "password": {
-                    "type": "string",
-                    "example": "secret123"
-                }
-            }
-        },
-        "v1.Register": {
+        "v1.RegisterReq": {
             "type": "object",
             "required": [
                 "email",
@@ -871,22 +813,40 @@ const docTemplate = `{
                 }
             }
         },
-        "v1.TaskList": {
+        "v1.TaskResp": {
             "type": "object",
             "properties": {
-                "tasks": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/domain.Task"
-                    }
+                "created_at": {
+                    "type": "string",
+                    "example": "2026-01-01T00:00:00Z"
                 },
-                "total": {
-                    "type": "integer",
-                    "example": 42
+                "description": {
+                    "type": "string",
+                    "example": "Task description"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "todo"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "My task"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2026-01-01T00:00:00Z"
+                },
+                "user_id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 }
             }
         },
-        "v1.Token": {
+        "v1.TokenResp": {
             "type": "object",
             "properties": {
                 "token": {
@@ -895,28 +855,24 @@ const docTemplate = `{
                 }
             }
         },
-        "v1.TransitionTask": {
+        "v1.TransitionTaskReq": {
             "type": "object",
             "required": [
                 "status"
             ],
             "properties": {
                 "status": {
+                    "type": "string",
                     "enum": [
                         "todo",
                         "in_progress",
                         "done"
                     ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/domain.TaskStatus"
-                        }
-                    ],
                     "example": "in_progress"
                 }
             }
         },
-        "v1.UpdateTask": {
+        "v1.UpdateTaskReq": {
             "type": "object",
             "required": [
                 "title"
@@ -931,6 +887,31 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 255,
                     "example": "Updated task"
+                }
+            }
+        },
+        "v1.UserResp": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string",
+                    "example": "2026-01-01T00:00:00Z"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "john@example.com"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2026-01-01T00:00:00Z"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "johndoe"
                 }
             }
         }

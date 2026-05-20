@@ -1,9 +1,71 @@
 basePath: /v1
 definitions:
-  domain.Notification:
+  v1.CreateTaskReq:
+    properties:
+      description:
+        example: Task description
+        maxLength: 1000
+        type: string
+      title:
+        example: My task
+        maxLength: 255
+        type: string
+    required:
+    - title
+    type: object
+  v1.Error:
+    properties:
+      error:
+        $ref: '#/definitions/v1.ErrorBody'
+    type: object
+  v1.ErrorBody:
+    properties:
+      code:
+        example: TASK_NOT_FOUND
+        type: string
+      message:
+        example: task not found
+        type: string
+      request_id:
+        example: request-id
+        type: string
+    type: object
+  v1.ListNotificationsResp:
+    properties:
+      notifications:
+        items:
+          $ref: '#/definitions/v1.NotificationResp'
+        type: array
+      total:
+        example: 42
+        type: integer
+    type: object
+  v1.ListTasksResp:
+    properties:
+      tasks:
+        items:
+          $ref: '#/definitions/v1.TaskResp'
+        type: array
+      total:
+        example: 42
+        type: integer
+    type: object
+  v1.LoginReq:
+    properties:
+      email:
+        example: john@example.com
+        type: string
+      password:
+        example: secret123
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  v1.NotificationResp:
     properties:
       body:
-        example: Task "Ship the scaffold" was created.
+        example: Task was created.
         type: string
       created_at:
         example: "2026-01-01T00:00:00Z"
@@ -24,115 +86,13 @@ definitions:
         example: Task created
         type: string
       type:
-        allOf:
-        - $ref: '#/definitions/domain.NotificationType'
         example: task_created
-      user_id:
-        example: 550e8400-e29b-41d4-a716-446655440000
-        type: string
-    type: object
-  domain.NotificationList:
-    properties:
-      notifications:
-        items:
-          $ref: '#/definitions/domain.Notification'
-        type: array
-      total:
-        type: integer
-    type: object
-  domain.NotificationType:
-    enum:
-    - task_created
-    - task_status_changed
-    type: string
-    x-enum-varnames:
-    - NotificationTypeTaskCreated
-    - NotificationTypeTaskStatusChanged
-  domain.Task:
-    properties:
-      created_at:
-        example: "2026-01-01T00:00:00Z"
-        type: string
-      description:
-        example: Task description
-        type: string
-      id:
-        example: 550e8400-e29b-41d4-a716-446655440000
-        type: string
-      status:
-        allOf:
-        - $ref: '#/definitions/domain.TaskStatus'
-        example: todo
-      title:
-        example: My task
-        type: string
-      updated_at:
-        example: "2026-01-01T00:00:00Z"
         type: string
       user_id:
         example: 550e8400-e29b-41d4-a716-446655440000
         type: string
     type: object
-  domain.TaskStatus:
-    enum:
-    - todo
-    - in_progress
-    - done
-    type: string
-    x-enum-varnames:
-    - TaskStatusTodo
-    - TaskStatusInProgress
-    - TaskStatusDone
-  domain.User:
-    properties:
-      created_at:
-        example: "2026-01-01T00:00:00Z"
-        type: string
-      email:
-        example: john@example.com
-        type: string
-      id:
-        example: 550e8400-e29b-41d4-a716-446655440000
-        type: string
-      updated_at:
-        example: "2026-01-01T00:00:00Z"
-        type: string
-      username:
-        example: johndoe
-        type: string
-    type: object
-  v1.CreateTask:
-    properties:
-      description:
-        example: Task description
-        maxLength: 1000
-        type: string
-      title:
-        example: My task
-        maxLength: 255
-        type: string
-    required:
-    - title
-    type: object
-  v1.Error:
-    properties:
-      error:
-        example: message
-        type: string
-    type: object
-  v1.Login:
-    properties:
-      email:
-        example: john@example.com
-        type: string
-      password:
-        example: secret123
-        type: string
-    required:
-    - email
-    - password
-    type: object
-  v1.Register:
+  v1.RegisterReq:
     properties:
       email:
         example: john@example.com
@@ -151,36 +111,49 @@ definitions:
     - password
     - username
     type: object
-  v1.TaskList:
+  v1.TaskResp:
     properties:
-      tasks:
-        items:
-          $ref: '#/definitions/domain.Task'
-        type: array
-      total:
-        example: 42
-        type: integer
+      created_at:
+        example: "2026-01-01T00:00:00Z"
+        type: string
+      description:
+        example: Task description
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      status:
+        example: todo
+        type: string
+      title:
+        example: My task
+        type: string
+      updated_at:
+        example: "2026-01-01T00:00:00Z"
+        type: string
+      user_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
     type: object
-  v1.Token:
+  v1.TokenResp:
     properties:
       token:
         example: eyJhbGciOiJIUzI1NiIs...
         type: string
     type: object
-  v1.TransitionTask:
+  v1.TransitionTaskReq:
     properties:
       status:
-        allOf:
-        - $ref: '#/definitions/domain.TaskStatus'
         enum:
         - todo
         - in_progress
         - done
         example: in_progress
+        type: string
     required:
     - status
     type: object
-  v1.UpdateTask:
+  v1.UpdateTaskReq:
     properties:
       description:
         example: Updated description
@@ -192,6 +165,24 @@ definitions:
         type: string
     required:
     - title
+    type: object
+  v1.UserResp:
+    properties:
+      created_at:
+        example: "2026-01-01T00:00:00Z"
+        type: string
+      email:
+        example: john@example.com
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      updated_at:
+        example: "2026-01-01T00:00:00Z"
+        type: string
+      username:
+        example: johndoe
+        type: string
     type: object
 host: localhost:8080
 info:
@@ -213,14 +204,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/v1.Login'
+          $ref: '#/definitions/v1.LoginReq'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/v1.Token'
+            $ref: '#/definitions/v1.TokenResp'
         "400":
           description: Bad Request
           schema:
@@ -248,14 +239,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/v1.Register'
+          $ref: '#/definitions/v1.RegisterReq'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/domain.User'
+            $ref: '#/definitions/v1.UserResp'
         "400":
           description: Bad Request
           schema:
@@ -296,7 +287,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.NotificationList'
+            $ref: '#/definitions/v1.ListNotificationsResp'
         "400":
           description: Bad Request
           schema:
@@ -330,7 +321,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.Notification'
+            $ref: '#/definitions/v1.NotificationResp'
         "401":
           description: Unauthorized
           schema:
@@ -381,7 +372,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/v1.TaskList'
+            $ref: '#/definitions/v1.ListTasksResp'
         "400":
           description: Bad Request
           schema:
@@ -410,14 +401,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/v1.CreateTask'
+          $ref: '#/definitions/v1.CreateTaskReq'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/domain.Task'
+            $ref: '#/definitions/v1.TaskResp'
         "400":
           description: Bad Request
           schema:
@@ -480,7 +471,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.Task'
+            $ref: '#/definitions/v1.TaskResp'
         "401":
           description: Unauthorized
           schema:
@@ -514,14 +505,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/v1.UpdateTask'
+          $ref: '#/definitions/v1.UpdateTaskReq'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.Task'
+            $ref: '#/definitions/v1.TaskResp'
         "400":
           description: Bad Request
           schema:
@@ -561,14 +552,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/v1.TransitionTask'
+          $ref: '#/definitions/v1.TransitionTaskReq'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.Task'
+            $ref: '#/definitions/v1.TaskResp'
         "400":
           description: Bad Request
           schema:
@@ -600,7 +591,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.User'
+            $ref: '#/definitions/v1.UserResp'
         "401":
           description: Unauthorized
           schema:

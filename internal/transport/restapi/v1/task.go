@@ -17,8 +17,8 @@ import (
 // @Tags        tasks
 // @Accept      json
 // @Produce     json
-// @Param       request body     request.CreateTask true "Task data"
-// @Success     201     {object} domain.Task
+// @Param       request body     request.CreateTaskReq true "Task data"
+// @Success     201     {object} response.TaskResp
 // @Failure     400     {object} response.Error
 // @Failure     401     {object} response.Error
 // @Failure     500     {object} response.Error
@@ -32,7 +32,7 @@ func (r *V1) createTask(ctx *gin.Context) {
 		return
 	}
 
-	var body request.CreateTask
+	var body request.CreateTaskReq
 
 	if err := ctx.ShouldBindJSON(&body); err != nil {
 		apperror.Log(r.l, err, "restapi - v1 - createTask")
@@ -56,7 +56,7 @@ func (r *V1) createTask(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, task)
+	ctx.JSON(http.StatusCreated, response.NewTaskResp(task))
 }
 
 // @Summary     List tasks
@@ -68,7 +68,7 @@ func (r *V1) createTask(ctx *gin.Context) {
 // @Param       q      query    string false "Search in task title"
 // @Param       limit  query    int    false "Limit"  default(10)
 // @Param       offset query    int    false "Offset" default(0)
-// @Success     200    {object} response.TaskList
+// @Success     200    {object} response.ListTasksResp
 // @Failure     400    {object} response.Error
 // @Failure     401    {object} response.Error
 // @Failure     500    {object} response.Error
@@ -117,10 +117,7 @@ func (r *V1) listTasks(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.TaskList{
-		Tasks: tasks,
-		Total: total,
-	})
+	ctx.JSON(http.StatusOK, response.NewListTasksResp(tasks, total))
 }
 
 // @Summary     Get task
@@ -129,7 +126,7 @@ func (r *V1) listTasks(ctx *gin.Context) {
 // @Tags        tasks
 // @Produce     json
 // @Param       id  path     string true "Task ID"
-// @Success     200 {object} domain.Task
+// @Success     200 {object} response.TaskResp
 // @Failure     401 {object} response.Error
 // @Failure     404 {object} response.Error
 // @Failure     500 {object} response.Error
@@ -151,7 +148,7 @@ func (r *V1) getTask(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, task)
+	ctx.JSON(http.StatusOK, response.NewTaskResp(task))
 }
 
 // @Summary     Update task
@@ -161,8 +158,8 @@ func (r *V1) getTask(ctx *gin.Context) {
 // @Accept      json
 // @Produce     json
 // @Param       id      path     string            true "Task ID"
-// @Param       request body     request.UpdateTask  true "Updated task data"
-// @Success     200     {object} domain.Task
+// @Param       request body     request.UpdateTaskReq true "Updated task data"
+// @Success     200     {object} response.TaskResp
 // @Failure     400     {object} response.Error
 // @Failure     401     {object} response.Error
 // @Failure     404     {object} response.Error
@@ -177,7 +174,7 @@ func (r *V1) updateTask(ctx *gin.Context) {
 		return
 	}
 
-	var body request.UpdateTask
+	var body request.UpdateTaskReq
 
 	if err := ctx.ShouldBindJSON(&body); err != nil {
 		apperror.Log(r.l, err, "restapi - v1 - updateTask")
@@ -201,7 +198,7 @@ func (r *V1) updateTask(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, task)
+	ctx.JSON(http.StatusOK, response.NewTaskResp(task))
 }
 
 // @Summary     Transition task status
@@ -211,8 +208,8 @@ func (r *V1) updateTask(ctx *gin.Context) {
 // @Accept      json
 // @Produce     json
 // @Param       id      path     string                true "Task ID"
-// @Param       request body     request.TransitionTask  true "New status"
-// @Success     200     {object} domain.Task
+// @Param       request body     request.TransitionTaskReq true "New status"
+// @Success     200     {object} response.TaskResp
 // @Failure     400     {object} response.Error
 // @Failure     401     {object} response.Error
 // @Failure     404     {object} response.Error
@@ -227,7 +224,7 @@ func (r *V1) transitionTask(ctx *gin.Context) {
 		return
 	}
 
-	var body request.TransitionTask
+	var body request.TransitionTaskReq
 
 	if err := ctx.ShouldBindJSON(&body); err != nil {
 		apperror.Log(r.l, err, "restapi - v1 - transitionTask")
@@ -243,7 +240,7 @@ func (r *V1) transitionTask(ctx *gin.Context) {
 		return
 	}
 
-	task, err := r.tk.Transition(ctx.Request.Context(), userID, ctx.Param("id"), body.Status)
+	task, err := r.tk.Transition(ctx.Request.Context(), userID, ctx.Param("id"), domain.TaskStatus(body.Status))
 	if err != nil {
 		apperror.Log(r.l, err, "restapi - v1 - transitionTask")
 		mappedErrorResponse(ctx, err)
@@ -251,7 +248,7 @@ func (r *V1) transitionTask(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, task)
+	ctx.JSON(http.StatusOK, response.NewTaskResp(task))
 }
 
 // @Summary     Delete task

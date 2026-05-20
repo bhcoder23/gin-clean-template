@@ -32,12 +32,10 @@ func Recovery(l logger.Interface) gin.HandlerFunc {
 	return gin.CustomRecovery(func(ctx *gin.Context, recovered any) {
 		l.Error(buildPanicMessage(ctx, recovered))
 		id, _ := requestid.FromContext(ctx.Request.Context())
-		ctx.AbortWithStatusJSON(http.StatusInternalServerError, response.Error{
-			Error: response.ErrorBody{
-				Code:      apperror.CodeInternalServer,
-				Message:   "internal server error",
-				RequestID: id,
-			},
-		})
+		ctx.AbortWithStatusJSON(http.StatusInternalServerError, response.NewError(
+			apperror.CodeInternalServer,
+			"internal server error",
+			id,
+		))
 	})
 }

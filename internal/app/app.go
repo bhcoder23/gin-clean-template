@@ -32,9 +32,9 @@ import (
 )
 
 type useCases struct {
-	notification *notification.UseCase
-	user         *user.UseCase
-	task         *task.UseCase
+	notification *notification.NotificationUsecase
+	user         *user.UserUsecase
+	task         *task.TaskUsecase
 }
 
 type servers struct {
@@ -67,10 +67,10 @@ func (t transportSet) any() bool {
 }
 
 func initUseCases(pg *postgres.Postgres, jwtManager *jwt.Manager) useCases {
-	stores := persistence.NewStores(pg)
-	userRepo := stores.Users()
-	taskRepo := stores.Tasks()
-	notificationRepo := stores.Notifications()
+	repos := persistence.NewRepositories(pg)
+	userRepo := repos.Users()
+	taskRepo := repos.Tasks()
+	notificationRepo := repos.Notifications()
 	transactor := persistence.NewTransactor(pg)
 
 	return useCases{

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/bhcoder23/gin-clean-template/internal/domain"
@@ -18,18 +19,52 @@ type TaskRepo struct {
 	executor postgres.Executor
 }
 
+type taskRow struct {
+	id          string
+	userID      string
+	title       string
+	description string
+	status      domain.TaskStatus
+	createdAt   time.Time
+	updatedAt   time.Time
+}
+
+func newTaskRow(task domain.Task) taskRow {
+	return taskRow{
+		id:          task.ID,
+		userID:      task.UserID,
+		title:       task.Title,
+		description: task.Description,
+		status:      task.Status,
+		createdAt:   task.CreatedAt,
+		updatedAt:   task.UpdatedAt,
+	}
+}
+
+func (r taskRow) toDomain() domain.Task {
+	return domain.Task{
+		ID:          r.id,
+		UserID:      r.userID,
+		Title:       r.title,
+		Description: r.description,
+		Status:      r.status,
+		CreatedAt:   r.createdAt,
+		UpdatedAt:   r.updatedAt,
+	}
+}
+
 func collectTaskRows(rows pgx.Rows, limit uint64) ([]domain.Task, error) {
 	tasks := make([]domain.Task, 0, limit)
 
 	for rows.Next() {
-		var t domain.Task
+		var row taskRow
 
-		err := rows.Scan(&t.ID, &t.UserID, &t.Title, &t.Description, &t.Status, &t.CreatedAt, &t.UpdatedAt)
+		err := rows.Scan(&row.id, &row.userID, &row.title, &row.description, &row.status, &row.createdAt, &row.updatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("collectTaskRows - rows.Scan: %w", err)
 		}
 
-		tasks = append(tasks, t)
+		tasks = append(tasks, row.toDomain())
 	}
 
 	if err := rows.Err(); err != nil {
@@ -54,10 +89,12 @@ func NewTaskRepoWithExecutor(builder sq.StatementBuilderType, executor postgres.
 
 // Store -.
 func (r *TaskRepo) Store(ctx context.Context, task *domain.Task) error {
+	row := newTaskRow(*task)
+
 	sql, args, err := r.builder.
 		Insert("tasks").
 		Columns("id, user_id, title, description, status, created_at, updated_at").
-		Values(task.ID, task.UserID, task.Title, task.Description, task.Status, task.CreatedAt, task.UpdatedAt).
+		Values(row.id, row.userID, row.title, row.description, row.status, row.createdAt, row.updatedAt).
 		ToSql()
 	if err != nil {
 		return fmt.Errorf("TaskRepo - Store - r.Builder: %w", err)
@@ -82,10 +119,10 @@ func (r *TaskRepo) GetByID(ctx context.Context, userID, taskID string) (domain.T
 		return domain.Task{}, fmt.Errorf("TaskRepo - GetByID - r.Builder: %w", err)
 	}
 
-	var task domain.Task
+	var row taskRow
 
 	err = r.executor.QueryRow(ctx, sql, args...).
-		Scan(&task.ID, &task.UserID, &task.Title, &task.Description, &task.Status, &task.CreatedAt, &task.UpdatedAt)
+		Scan(&row.id, &row.userID, &row.title, &row.description, &row.status, &row.createdAt, &row.updatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.Task{}, domain.ErrTaskNotFound
@@ -94,7 +131,7 @@ func (r *TaskRepo) GetByID(ctx context.Context, userID, taskID string) (domain.T
 		return domain.Task{}, fmt.Errorf("TaskRepo - GetByID - r.Pool.QueryRow: %w", err)
 	}
 
-	return task, nil
+	return row.toDomain(), nil
 }
 
 // List -.
@@ -161,13 +198,15 @@ func (r *TaskRepo) List(ctx context.Context, userID string, filter appports.Task
 
 // Update -.
 func (r *TaskRepo) Update(ctx context.Context, task *domain.Task) error {
+	row := newTaskRow(*task)
+
 	sql, args, err := r.builder.
 		Update("tasks").
-		Set("title", task.Title).
-		Set("description", task.Description).
-		Set("status", task.Status).
-		Set("updated_at", task.UpdatedAt).
-		Where(sq.Eq{"id": task.ID, "user_id": task.UserID}).
+		Set("title", row.title).
+		Set("description", row.description).
+		Set("status", row.status).
+		Set("updated_at", row.updatedAt).
+		Where(sq.Eq{"id": row.id, "user_id": row.userID}).
 		ToSql()
 	if err != nil {
 		return fmt.Errorf("TaskRepo - Update - r.Builder: %w", err)

@@ -13,7 +13,7 @@ import (
 
 func (r *V1) register() server.CallHandler {
 	return func(ctx context.Context, msg *nats.Msg) (any, error) {
-		var req request.Register
+		var req request.RegisterReq
 
 		err := json.Unmarshal(msg.Data, &req)
 		if err != nil {
@@ -33,13 +33,13 @@ func (r *V1) register() server.CallHandler {
 			return nil, apperror.RPC(err)
 		}
 
-		return user, nil
+		return response.NewUserResp(user), nil
 	}
 }
 
 func (r *V1) login() server.CallHandler {
 	return func(ctx context.Context, msg *nats.Msg) (any, error) {
-		var req request.Login
+		var req request.LoginReq
 
 		err := json.Unmarshal(msg.Data, &req)
 		if err != nil {
@@ -59,6 +59,6 @@ func (r *V1) login() server.CallHandler {
 			return nil, apperror.RPC(err)
 		}
 
-		return response.Token{Token: token}, nil
+		return response.TokenResp{Token: token}, nil
 	}
 }

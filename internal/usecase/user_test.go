@@ -17,12 +17,12 @@ import (
 
 var errUseCaseInternal = errors.New("internal server error")
 
-func newUserUseCase(t *testing.T) (*user.UseCase, *MockUserStore) {
+func newUserUseCase(t *testing.T) (*user.UserUsecase, *MockUserRepo) {
 	t.Helper()
 
 	ctrl := gomock.NewController(t)
 
-	repo := NewMockUserStore(ctrl)
+	repo := NewMockUserRepo(ctrl)
 	jwtManager := jwt.New("test-secret", time.Hour)
 	useCase := user.New(repo, jwtManager)
 

@@ -9,6 +9,7 @@ import (
 	"github.com/bhcoder23/gin-clean-template/internal/domain"
 	"github.com/bhcoder23/gin-clean-template/pkg/logger"
 	"github.com/go-playground/validator/v10"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -90,7 +91,26 @@ func HTTP(err error) (statusCode int, message string) {
 func GRPC(err error) error {
 	appErr := From(err)
 
-	return status.Error(appErr.GRPCCode, appErr.Message)
+	return grpcError(appErr, appErr.Message)
+}
+
+func GRPCWithMessage(err error, message string) error {
+	appErr := From(err)
+	if message == "" {
+		message = appErr.Message
+	}
+
+	return grpcError(appErr, message)
+}
+
+func grpcError(appErr Error, message string) error {
+	st := status.New(appErr.GRPCCode, message)
+	st, err := st.WithDetails(&errdetails.ErrorInfo{Reason: appErr.Code})
+	if err != nil {
+		return status.Error(appErr.GRPCCode, message)
+	}
+
+	return st.Err()
 }
 
 func RPC(err error) error {

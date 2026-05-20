@@ -5,8 +5,7 @@ import (
 	"strconv"
 
 	"github.com/bhcoder23/gin-clean-template/internal/apperror"
-	"github.com/bhcoder23/gin-clean-template/internal/domain"
-	_ "github.com/bhcoder23/gin-clean-template/internal/transport/restapi/v1/response" // for swaggo
+	"github.com/bhcoder23/gin-clean-template/internal/transport/restapi/v1/response"
 	"github.com/gin-gonic/gin"
 )
 
@@ -18,7 +17,7 @@ import (
 // @Param       unread_only query    bool false "Only unread notifications"
 // @Param       limit       query    int  false "Limit"  default(10)
 // @Param       offset      query    int  false "Offset" default(0)
-// @Success     200 {object} domain.NotificationList
+// @Success     200 {object} response.ListNotificationsResp
 // @Failure     400 {object} response.Error
 // @Failure     401 {object} response.Error
 // @Failure     500 {object} response.Error
@@ -67,10 +66,7 @@ func (r *V1) listNotifications(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, domain.NotificationList{
-		Notifications: notifications,
-		Total:         total,
-	})
+	ctx.JSON(http.StatusOK, response.NewListNotificationsResp(notifications, total))
 }
 
 // @Summary     Mark notification as read
@@ -79,7 +75,7 @@ func (r *V1) listNotifications(ctx *gin.Context) {
 // @Tags        notifications
 // @Produce     json
 // @Param       id path string true "Notification ID"
-// @Success     200 {object} domain.Notification
+// @Success     200 {object} response.NotificationResp
 // @Failure     401 {object} response.Error
 // @Failure     404 {object} response.Error
 // @Failure     500 {object} response.Error
@@ -101,5 +97,5 @@ func (r *V1) markNotificationRead(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, notification)
+	ctx.JSON(http.StatusOK, response.NewNotificationResp(notification))
 }

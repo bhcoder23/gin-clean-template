@@ -11,23 +11,23 @@ import (
 //go:generate go tool mockgen -source=contracts.go -destination=./mocks_usecase_test.go -package=usecase_test
 
 type (
-	// NotificationStore -.
-	NotificationStore interface {
+	// NotificationRepo persists notification aggregates.
+	NotificationRepo interface {
 		Store(ctx context.Context, notification *domain.Notification) error
 		GetByID(ctx context.Context, userID, notificationID string) (domain.Notification, error)
 		List(ctx context.Context, userID string, filter NotificationFilter) ([]domain.Notification, int, error)
 		Update(ctx context.Context, notification *domain.Notification) error
 	}
 
-	// UserStore -.
-	UserStore interface {
+	// UserRepo persists user aggregates.
+	UserRepo interface {
 		Store(ctx context.Context, user *domain.User) error
 		GetByID(ctx context.Context, id string) (domain.User, error)
 		GetByEmail(ctx context.Context, email string) (domain.User, error)
 	}
 
-	// TaskStore -.
-	TaskStore interface {
+	// TaskRepo persists task aggregates.
+	TaskRepo interface {
 		Store(ctx context.Context, task *domain.Task) error
 		GetByID(ctx context.Context, userID, taskID string) (domain.Task, error)
 		List(ctx context.Context, userID string, filter TaskFilter) ([]domain.Task, int, error)
@@ -40,17 +40,17 @@ type (
 		Add(ctx context.Context, event *OutboxEvent) error
 	}
 
-	// StoreProvider exposes repositories bound to the same persistence executor.
-	StoreProvider interface {
-		Users() UserStore
-		Tasks() TaskStore
-		Notifications() NotificationStore
+	// RepoProvider exposes repositories bound to the same persistence executor.
+	RepoProvider interface {
+		Users() UserRepo
+		Tasks() TaskRepo
+		Notifications() NotificationRepo
 		Outbox() OutboxStore
 	}
 
 	// Transactor runs multi-repository use cases in one transaction.
 	Transactor interface {
-		WithinTx(ctx context.Context, fn func(context.Context, StoreProvider) error) error
+		WithinTx(ctx context.Context, fn func(context.Context, RepoProvider) error) error
 	}
 
 	// TaskFilter -.

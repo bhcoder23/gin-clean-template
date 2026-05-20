@@ -8,15 +8,13 @@ import (
 	"github.com/bhcoder23/gin-clean-template/internal/domain"
 	grpcmw "github.com/bhcoder23/gin-clean-template/internal/transport/grpc/middleware"
 	"github.com/bhcoder23/gin-clean-template/internal/transport/grpc/v1/response"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // CreateTask -.
 func (c *TaskController) CreateTask(ctx context.Context, req *v1.CreateTaskRequest) (*v1.TaskResponse, error) {
 	userID, ok := grpcmw.UserIDFromContext(ctx)
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "unauthorized")
+		return nil, apperror.GRPC(apperror.ErrUnauthorized)
 	}
 
 	task, err := c.tk.Create(ctx, userID, req.GetTitle(), req.GetDescription())
@@ -33,7 +31,7 @@ func (c *TaskController) CreateTask(ctx context.Context, req *v1.CreateTaskReque
 func (c *TaskController) GetTask(ctx context.Context, req *v1.GetTaskRequest) (*v1.TaskResponse, error) {
 	userID, ok := grpcmw.UserIDFromContext(ctx)
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "unauthorized")
+		return nil, apperror.GRPC(apperror.ErrUnauthorized)
 	}
 
 	task, err := c.tk.Get(ctx, userID, req.GetId())
@@ -50,7 +48,7 @@ func (c *TaskController) GetTask(ctx context.Context, req *v1.GetTaskRequest) (*
 func (c *TaskController) ListTasks(ctx context.Context, req *v1.ListTasksRequest) (*v1.ListTasksResponse, error) {
 	userID, ok := grpcmw.UserIDFromContext(ctx)
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "unauthorized")
+		return nil, apperror.GRPC(apperror.ErrUnauthorized)
 	}
 
 	var statusFilter *domain.TaskStatus
@@ -58,7 +56,7 @@ func (c *TaskController) ListTasks(ctx context.Context, req *v1.ListTasksRequest
 	if req.GetStatus() != "" {
 		s := domain.TaskStatus(req.GetStatus())
 		if !s.Valid() {
-			return nil, status.Error(codes.InvalidArgument, "invalid task status")
+			return nil, apperror.GRPCWithMessage(apperror.ErrInvalidRequest, "invalid task status")
 		}
 
 		statusFilter = &s
@@ -68,7 +66,7 @@ func (c *TaskController) ListTasks(ctx context.Context, req *v1.ListTasksRequest
 	if err != nil {
 		apperror.Log(c.l, err, "grpc - v1 - ListTasks")
 
-		return nil, status.Error(codes.Internal, "internal server error")
+		return nil, apperror.GRPC(err)
 	}
 
 	return response.NewListTasksResponse(tasks, total), nil
@@ -91,7 +89,7 @@ func (c *TaskController) TransitionTask(ctx context.Context, req *v1.TransitionT
 func (c *TaskController) writeTaskResponse(ctx context.Context, logMessage string, write func(string) (domain.Task, error)) (*v1.TaskResponse, error) {
 	userID, ok := grpcmw.UserIDFromContext(ctx)
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "unauthorized")
+		return nil, apperror.GRPC(apperror.ErrUnauthorized)
 	}
 
 	task, err := write(userID)
@@ -108,7 +106,7 @@ func (c *TaskController) writeTaskResponse(ctx context.Context, logMessage strin
 func (c *TaskController) DeleteTask(ctx context.Context, req *v1.DeleteTaskRequest) (*v1.DeleteTaskResponse, error) {
 	userID, ok := grpcmw.UserIDFromContext(ctx)
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "unauthorized")
+		return nil, apperror.GRPC(apperror.ErrUnauthorized)
 	}
 
 	err := c.tk.Delete(ctx, userID, req.GetId())

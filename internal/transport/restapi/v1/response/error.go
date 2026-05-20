@@ -11,3 +11,14 @@ type ErrorBody struct {
 	Message   string `example:"task not found"  json:"message"`
 	RequestID string `example:"request-id"      json:"request_id,omitempty"`
 } // @name v1.ErrorBody
+
+// NewError creates the stable REST error envelope.
+func NewError(code, message, requestID string) Error {
+	return Error{
+		Error: ErrorBody{
+			Code:      code,
+			Message:   message,
+			RequestID: requestID,
+		},
+	}
+}

@@ -5,10 +5,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bhcoder23/gin-clean-template/internal/apperror"
 	grpcmw "github.com/bhcoder23/gin-clean-template/internal/transport/grpc/middleware"
 	"github.com/bhcoder23/gin-clean-template/pkg/jwt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -75,6 +77,18 @@ func requireUnauthenticated(ctx context.Context, t *testing.T, wantMessage strin
 	require.True(t, ok)
 	assert.Equal(t, codes.Unauthenticated, st.Code())
 	assert.Contains(t, st.Message(), wantMessage)
+	requireErrorInfoReason(t, st, apperror.CodeUnauthorized)
+}
+
+func requireErrorInfoReason(t *testing.T, st *status.Status, want string) {
+	t.Helper()
+
+	details := st.Details()
+	require.Len(t, details, 1)
+
+	info, ok := details[0].(*errdetails.ErrorInfo)
+	require.True(t, ok)
+	assert.Equal(t, want, info.GetReason())
 }
 
 func TestAuthInterceptor_SkipRegister(t *testing.T) {
@@ -105,6 +119,7 @@ func TestAuthInterceptor_MissingMetadata(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, codes.Unauthenticated, st.Code())
 	assert.Contains(t, st.Message(), "missing metadata")
+	requireErrorInfoReason(t, st, apperror.CodeUnauthorized)
 }
 
 func TestAuthInterceptor_MissingAuthorizationToken(t *testing.T) {
@@ -128,6 +143,7 @@ func TestAuthInterceptor_MissingAuthorizationToken(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, codes.Unauthenticated, st.Code())
 	assert.Contains(t, st.Message(), "missing authorization token")
+	requireErrorInfoReason(t, st, apperror.CodeUnauthorized)
 }
 
 func TestAuthInterceptor_InvalidToken(t *testing.T) {

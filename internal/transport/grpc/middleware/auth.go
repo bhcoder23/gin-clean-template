@@ -4,11 +4,10 @@ import (
 	"context"
 	"strings"
 
+	"github.com/bhcoder23/gin-clean-template/internal/apperror"
 	"github.com/bhcoder23/gin-clean-template/pkg/jwt"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 )
 
 type contextKey string
@@ -38,22 +37,22 @@ func AuthInterceptor(jwtManager *jwt.Manager) grpc.UnaryServerInterceptor {
 
 		md, ok := metadata.FromIncomingContext(ctx)
 		if !ok {
-			return nil, status.Error(codes.Unauthenticated, "missing metadata")
+			return nil, apperror.GRPCWithMessage(apperror.ErrUnauthorized, "missing metadata")
 		}
 
 		values := md.Get("authorization")
 		if len(values) == 0 {
-			return nil, status.Error(codes.Unauthenticated, "missing authorization token")
+			return nil, apperror.GRPCWithMessage(apperror.ErrUnauthorized, "missing authorization token")
 		}
 
 		parts := strings.SplitN(values[0], " ", bearerParts)
 		if len(parts) != bearerParts || parts[0] != "Bearer" {
-			return nil, status.Error(codes.Unauthenticated, "invalid authorization header format")
+			return nil, apperror.GRPCWithMessage(apperror.ErrUnauthorized, "invalid authorization header format")
 		}
 
 		userID, err := jwtManager.ParseToken(parts[1])
 		if err != nil {
-			return nil, status.Error(codes.Unauthenticated, "invalid or expired token")
+			return nil, apperror.GRPCWithMessage(apperror.ErrUnauthorized, "invalid or expired token")
 		}
 
 		ctx = context.WithValue(ctx, userIDKey, userID)

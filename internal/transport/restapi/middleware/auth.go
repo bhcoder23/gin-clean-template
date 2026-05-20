@@ -44,11 +44,5 @@ func Auth(jwtManager *jwt.Manager) gin.HandlerFunc {
 
 func abortUnauthorized(ctx *gin.Context, message string) {
 	id, _ := requestid.FromContext(ctx.Request.Context())
-	ctx.AbortWithStatusJSON(http.StatusUnauthorized, response.Error{
-		Error: response.ErrorBody{
-			Code:      apperror.CodeUnauthorized,
-			Message:   message,
-			RequestID: id,
-		},
-	})
+	ctx.AbortWithStatusJSON(http.StatusUnauthorized, response.NewError(apperror.CodeUnauthorized, message, id))
 }

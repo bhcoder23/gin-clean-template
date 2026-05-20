@@ -19,7 +19,7 @@ func (r *V1) createTask() server.CallHandler {
 			return nil, err
 		}
 
-		var req request.CreateTask
+		var req request.CreateTaskReq
 
 		err = json.Unmarshal(data, &req)
 		if err != nil {
@@ -37,7 +37,7 @@ func (r *V1) createTask() server.CallHandler {
 			return nil, apperror.RPC(err)
 		}
 
-		return task, nil
+		return response.NewTaskResp(task), nil
 	}
 }
 
@@ -48,7 +48,7 @@ func (r *V1) getTask() server.CallHandler {
 			return nil, err
 		}
 
-		var req request.GetTask
+		var req request.GetTaskReq
 
 		err = json.Unmarshal(data, &req)
 		if err != nil {
@@ -66,7 +66,7 @@ func (r *V1) getTask() server.CallHandler {
 			return nil, apperror.RPC(err)
 		}
 
-		return task, nil
+		return response.NewTaskResp(task), nil
 	}
 }
 
@@ -77,7 +77,7 @@ func (r *V1) listTasks() server.CallHandler {
 			return nil, err
 		}
 
-		var req request.ListTasks
+		var req request.ListTasksReq
 
 		err = json.Unmarshal(data, &req)
 		if err != nil {
@@ -102,7 +102,7 @@ func (r *V1) listTasks() server.CallHandler {
 			return nil, apperror.RPC(err)
 		}
 
-		return response.TaskList{Tasks: tasks, Total: total}, nil
+		return response.NewListTasksResp(tasks, total), nil
 	}
 }
 
@@ -113,7 +113,7 @@ func (r *V1) updateTask() server.CallHandler {
 			return nil, err
 		}
 
-		var req request.UpdateTask
+		var req request.UpdateTaskReq
 
 		err = json.Unmarshal(data, &req)
 		if err != nil {
@@ -131,7 +131,7 @@ func (r *V1) updateTask() server.CallHandler {
 			return nil, apperror.RPC(err)
 		}
 
-		return task, nil
+		return response.NewTaskResp(task), nil
 	}
 }
 
@@ -142,7 +142,7 @@ func (r *V1) transitionTask() server.CallHandler {
 			return nil, err
 		}
 
-		var req request.TransitionTask
+		var req request.TransitionTaskReq
 
 		err = json.Unmarshal(data, &req)
 		if err != nil {
@@ -160,7 +160,7 @@ func (r *V1) transitionTask() server.CallHandler {
 			return nil, apperror.RPC(err)
 		}
 
-		return task, nil
+		return response.NewTaskResp(task), nil
 	}
 }
 
@@ -171,7 +171,7 @@ func (r *V1) deleteTask() server.CallHandler {
 			return nil, err
 		}
 
-		var req request.DeleteTask
+		var req request.DeleteTaskReq
 
 		err = json.Unmarshal(data, &req)
 		if err != nil {

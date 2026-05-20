@@ -9,46 +9,46 @@ import (
 	"github.com/bhcoder23/gin-clean-template/pkg/postgres"
 )
 
-// Stores exposes repositories bound to the same executor.
-type Stores struct {
+// Repositories exposes repositories bound to the same executor.
+type Repositories struct {
 	builder  sq.StatementBuilderType
 	executor postgres.Executor
 }
 
-// NewStores creates repositories backed by the normal database pool.
-func NewStores(pg *postgres.Postgres) Stores {
-	return NewStoresWithExecutor(pg.Builder, pg.Pool)
+// NewRepositories creates repositories backed by the normal database pool.
+func NewRepositories(pg *postgres.Postgres) Repositories {
+	return NewRepositoriesWithExecutor(pg.Builder, pg.Pool)
 }
 
-// NewStoresWithExecutor creates repositories backed by a pool or transaction executor.
-func NewStoresWithExecutor(builder sq.StatementBuilderType, executor postgres.Executor) Stores {
-	return Stores{
+// NewRepositoriesWithExecutor creates repositories backed by a pool or transaction executor.
+func NewRepositoriesWithExecutor(builder sq.StatementBuilderType, executor postgres.Executor) Repositories {
+	return Repositories{
 		builder:  builder,
 		executor: executor,
 	}
 }
 
 // Users returns a user repository.
-func (s Stores) Users() appports.UserStore {
-	return NewUserRepoWithExecutor(s.builder, s.executor)
+func (r Repositories) Users() appports.UserRepo {
+	return NewUserRepoWithExecutor(r.builder, r.executor)
 }
 
 // Tasks returns a task repository.
-func (s Stores) Tasks() appports.TaskStore {
-	return NewTaskRepoWithExecutor(s.builder, s.executor)
+func (r Repositories) Tasks() appports.TaskRepo {
+	return NewTaskRepoWithExecutor(r.builder, r.executor)
 }
 
 // Notifications returns a notification repository.
-func (s Stores) Notifications() appports.NotificationStore {
-	return NewNotificationRepoWithExecutor(s.builder, s.executor)
+func (r Repositories) Notifications() appports.NotificationRepo {
+	return NewNotificationRepoWithExecutor(r.builder, r.executor)
 }
 
 // Outbox returns an outbox repository.
-func (s Stores) Outbox() appports.OutboxStore {
-	return outbox.NewStore(s.executor)
+func (r Repositories) Outbox() appports.OutboxStore {
+	return outbox.NewStore(r.executor)
 }
 
-// Transactor creates transaction-scoped stores.
+// Transactor creates transaction-scoped repositories.
 type Transactor struct {
 	pg *postgres.Postgres
 }
@@ -59,8 +59,8 @@ func NewTransactor(pg *postgres.Postgres) *Transactor {
 }
 
 // WithinTx runs fn with repositories bound to one transaction.
-func (t *Transactor) WithinTx(ctx context.Context, fn func(context.Context, appports.StoreProvider) error) error {
+func (t *Transactor) WithinTx(ctx context.Context, fn func(context.Context, appports.RepoProvider) error) error {
 	return t.pg.WithinTx(ctx, func(txCtx context.Context, executor postgres.Executor) error {
-		return fn(txCtx, NewStoresWithExecutor(t.pg.Builder, executor))
+		return fn(txCtx, NewRepositoriesWithExecutor(t.pg.Builder, executor))
 	})
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/bhcoder23/gin-clean-template/internal/domain"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -75,9 +76,34 @@ func TestGRPC(t *testing.T) {
 	t.Parallel()
 
 	err := GRPC(domain.ErrTaskNotFound)
+	st := status.Convert(err)
 
-	require.Equal(t, codes.NotFound, status.Code(err))
-	require.Equal(t, "task not found", status.Convert(err).Message())
+	require.Equal(t, codes.NotFound, st.Code())
+	require.Equal(t, "task not found", st.Message())
+
+	details := st.Details()
+	require.Len(t, details, 1)
+
+	info, ok := details[0].(*errdetails.ErrorInfo)
+	require.True(t, ok)
+	require.Equal(t, CodeTaskNotFound, info.GetReason())
+}
+
+func TestGRPCWithMessage(t *testing.T) {
+	t.Parallel()
+
+	err := GRPCWithMessage(ErrUnauthorized, "missing authorization token")
+	st := status.Convert(err)
+
+	require.Equal(t, codes.Unauthenticated, st.Code())
+	require.Equal(t, "missing authorization token", st.Message())
+
+	details := st.Details()
+	require.Len(t, details, 1)
+
+	info, ok := details[0].(*errdetails.ErrorInfo)
+	require.True(t, ok)
+	require.Equal(t, CodeUnauthorized, info.GetReason())
 }
 
 func TestRPC(t *testing.T) {

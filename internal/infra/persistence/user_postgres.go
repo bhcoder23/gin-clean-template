@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/bhcoder23/gin-clean-template/internal/domain"
@@ -16,6 +17,37 @@ import (
 type UserRepo struct {
 	builder  sq.StatementBuilderType
 	executor postgres.Executor
+}
+
+type userRow struct {
+	id           string
+	username     string
+	email        string
+	passwordHash string
+	createdAt    time.Time
+	updatedAt    time.Time
+}
+
+func newUserRow(user domain.User) userRow {
+	return userRow{
+		id:           user.ID,
+		username:     user.Username,
+		email:        user.Email,
+		passwordHash: user.PasswordHash,
+		createdAt:    user.CreatedAt,
+		updatedAt:    user.UpdatedAt,
+	}
+}
+
+func (r userRow) toDomain() domain.User {
+	return domain.User{
+		ID:           r.id,
+		Username:     r.username,
+		Email:        r.email,
+		PasswordHash: r.passwordHash,
+		CreatedAt:    r.createdAt,
+		UpdatedAt:    r.updatedAt,
+	}
 }
 
 // NewUserRepo -.
@@ -33,10 +65,12 @@ func NewUserRepoWithExecutor(builder sq.StatementBuilderType, executor postgres.
 
 // Store -.
 func (r *UserRepo) Store(ctx context.Context, user *domain.User) error {
+	row := newUserRow(*user)
+
 	sql, args, err := r.builder.
 		Insert("users").
 		Columns("id, username, email, password_hash, created_at, updated_at").
-		Values(user.ID, user.Username, user.Email, user.PasswordHash, user.CreatedAt, user.UpdatedAt).
+		Values(row.id, row.username, row.email, row.passwordHash, row.createdAt, row.updatedAt).
 		ToSql()
 	if err != nil {
 		return fmt.Errorf("UserRepo - Store - r.Builder: %w", err)
@@ -75,10 +109,10 @@ func (r *UserRepo) getUser(ctx context.Context, column, value string) (domain.Us
 		return domain.User{}, fmt.Errorf("UserRepo - getUser - r.Builder: %w", err)
 	}
 
-	var user domain.User
+	var row userRow
 
 	err = r.executor.QueryRow(ctx, sql, args...).
-		Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.CreatedAt, &user.UpdatedAt)
+		Scan(&row.id, &row.username, &row.email, &row.passwordHash, &row.createdAt, &row.updatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.User{}, domain.ErrUserNotFound
@@ -87,5 +121,5 @@ func (r *UserRepo) getUser(ctx context.Context, column, value string) (domain.Us
 		return domain.User{}, fmt.Errorf("UserRepo - getUser - r.Pool.QueryRow: %w", err)
 	}
 
-	return user, nil
+	return row.toDomain(), nil
 }

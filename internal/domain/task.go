@@ -7,7 +7,7 @@ import (
 )
 
 // TaskStatus -.
-type TaskStatus string // @name domain.TaskStatus
+type TaskStatus string
 
 const (
 	TaskStatusTodo       TaskStatus = "todo"
@@ -24,14 +24,14 @@ var (
 
 // Task -.
 type Task struct {
-	ID          string     `example:"550e8400-e29b-41d4-a716-446655440000" json:"id"`
-	UserID      string     `example:"550e8400-e29b-41d4-a716-446655440000" json:"user_id"`
-	Title       string     `example:"My task"                              json:"title"`
-	Description string     `example:"Task description"                     json:"description"`
-	Status      TaskStatus `example:"todo"                                 json:"status"`
-	CreatedAt   time.Time  `example:"2026-01-01T00:00:00Z"                 json:"created_at"`
-	UpdatedAt   time.Time  `example:"2026-01-01T00:00:00Z"                 json:"updated_at"`
-} // @name domain.Task
+	ID          string
+	UserID      string
+	Title       string
+	Description string
+	Status      TaskStatus
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
 
 // Valid reports whether s is a known task status.
 func (s TaskStatus) Valid() bool {

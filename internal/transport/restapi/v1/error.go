@@ -9,13 +9,7 @@ import (
 
 func errorResponse(ctx *gin.Context, status int, code, msg string) {
 	id, _ := requestid.FromContext(ctx.Request.Context())
-	ctx.AbortWithStatusJSON(status, response.Error{
-		Error: response.ErrorBody{
-			Code:      code,
-			Message:   msg,
-			RequestID: id,
-		},
-	})
+	ctx.AbortWithStatusJSON(status, response.NewError(code, msg, id))
 }
 
 func mappedErrorResponse(ctx *gin.Context, err error) {

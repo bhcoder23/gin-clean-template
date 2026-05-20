@@ -33,14 +33,14 @@ func (fakeRow) Scan(...any) error {
 
 var _ postgres.Executor = fakeExecutor{}
 
-func TestStoresCreateRepositoriesBoundToExecutor(t *testing.T) {
+func TestRepositoriesCreateRepositoriesBoundToExecutor(t *testing.T) {
 	t.Parallel()
 
 	builder := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
-	stores := NewStoresWithExecutor(builder, fakeExecutor{})
+	repos := NewRepositoriesWithExecutor(builder, fakeExecutor{})
 
-	require.NotNil(t, stores.Users())
-	require.NotNil(t, stores.Tasks())
-	require.NotNil(t, stores.Notifications())
-	require.NotNil(t, stores.Outbox())
+	require.NotNil(t, repos.Users())
+	require.NotNil(t, repos.Tasks())
+	require.NotNil(t, repos.Notifications())
+	require.NotNil(t, repos.Outbox())
 }

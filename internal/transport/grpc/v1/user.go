@@ -7,8 +7,6 @@ import (
 	"github.com/bhcoder23/gin-clean-template/internal/apperror"
 	grpcmw "github.com/bhcoder23/gin-clean-template/internal/transport/grpc/middleware"
 	"github.com/bhcoder23/gin-clean-template/internal/transport/grpc/v1/response"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // Register -.
@@ -39,7 +37,7 @@ func (c *AuthController) Login(ctx context.Context, req *v1.LoginRequest) (*v1.L
 func (c *AuthController) GetProfile(ctx context.Context, _ *v1.GetProfileRequest) (*v1.GetProfileResponse, error) {
 	userID, ok := grpcmw.UserIDFromContext(ctx)
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "unauthorized")
+		return nil, apperror.GRPC(apperror.ErrUnauthorized)
 	}
 
 	user, err := c.u.GetUser(ctx, userID)

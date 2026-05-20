@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/bhcoder23/gin-clean-template/internal/apperror"
-	"github.com/bhcoder23/gin-clean-template/internal/domain"
 	"github.com/bhcoder23/gin-clean-template/internal/transport/nats_rpc/v1/request"
+	"github.com/bhcoder23/gin-clean-template/internal/transport/nats_rpc/v1/response"
 	"github.com/bhcoder23/gin-clean-template/pkg/nats/nats_rpc/server"
 	"github.com/goccy/go-json"
 	"github.com/nats-io/nats.go"
@@ -18,7 +18,7 @@ func (r *V1) listNotifications() server.CallHandler {
 			return nil, err
 		}
 
-		var req request.ListNotifications
+		var req request.ListNotificationsReq
 		if len(data) > 0 {
 			if err = json.Unmarshal(data, &req); err != nil {
 				return nil, apperror.RPC(apperror.ErrInvalidRequest)
@@ -37,7 +37,7 @@ func (r *V1) listNotifications() server.CallHandler {
 			return nil, apperror.RPC(err)
 		}
 
-		return domain.NotificationList{Notifications: notifications, Total: total}, nil
+		return response.NewListNotificationsResp(notifications, total), nil
 	}
 }
 
@@ -48,7 +48,7 @@ func (r *V1) markNotificationRead() server.CallHandler {
 			return nil, err
 		}
 
-		var req request.MarkNotificationRead
+		var req request.MarkNotificationReadReq
 		if err = json.Unmarshal(data, &req); err != nil {
 			return nil, apperror.RPC(apperror.ErrInvalidRequest)
 		}
@@ -64,6 +64,6 @@ func (r *V1) markNotificationRead() server.CallHandler {
 			return nil, apperror.RPC(err)
 		}
 
-		return notification, nil
+		return response.NewNotificationResp(notification), nil
 	}
 }

@@ -15,14 +15,14 @@ import (
 // @Tags        auth
 // @Accept      json
 // @Produce     json
-// @Param       request body     request.Register true "Registration data"
-// @Success     201     {object} domain.User
+// @Param       request body     request.RegisterReq true "Registration data"
+// @Success     201     {object} response.UserResp
 // @Failure     400     {object} response.Error
 // @Failure     409     {object} response.Error
 // @Failure     500     {object} response.Error
 // @Router      /auth/register [post]
 func (r *V1) register(ctx *gin.Context) {
-	var body request.Register
+	var body request.RegisterReq
 
 	if err := ctx.ShouldBindJSON(&body); err != nil {
 		apperror.Log(r.l, err, "restapi - v1 - register")
@@ -46,7 +46,7 @@ func (r *V1) register(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, user)
+	ctx.JSON(http.StatusCreated, response.NewUserResp(user))
 }
 
 // @Summary     Login
@@ -55,14 +55,14 @@ func (r *V1) register(ctx *gin.Context) {
 // @Tags        auth
 // @Accept      json
 // @Produce     json
-// @Param       request body     request.Login true "Login credentials"
-// @Success     200     {object} response.Token
+// @Param       request body     request.LoginReq true "Login credentials"
+// @Success     200     {object} response.TokenResp
 // @Failure     400     {object} response.Error
 // @Failure     401     {object} response.Error
 // @Failure     500     {object} response.Error
 // @Router      /auth/login [post]
 func (r *V1) login(ctx *gin.Context) {
-	var body request.Login
+	var body request.LoginReq
 
 	if err := ctx.ShouldBindJSON(&body); err != nil {
 		apperror.Log(r.l, err, "restapi - v1 - login")
@@ -86,7 +86,7 @@ func (r *V1) login(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.Token{Token: token})
+	ctx.JSON(http.StatusOK, response.TokenResp{Token: token})
 }
 
 // @Summary     Get profile
@@ -94,7 +94,7 @@ func (r *V1) login(ctx *gin.Context) {
 // @ID          profile
 // @Tags        user
 // @Produce     json
-// @Success     200 {object} domain.User
+// @Success     200 {object} response.UserResp
 // @Failure     401 {object} response.Error
 // @Failure     404 {object} response.Error
 // @Failure     500 {object} response.Error
@@ -116,5 +116,5 @@ func (r *V1) profile(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, user)
+	ctx.JSON(http.StatusOK, response.NewUserResp(user))
 }

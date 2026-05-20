@@ -1,6 +1,6 @@
 package response
 
-// Token -.
-type Token struct {
+// TokenResp -.
+type TokenResp struct {
 	Token string `json:"token"`
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/bhcoder23/gin-clean-template/internal/domain"
@@ -18,18 +19,58 @@ type NotificationRepo struct {
 	executor postgres.Executor
 }
 
+type notificationRow struct {
+	id        string
+	userID    string
+	taskID    string
+	typ       domain.NotificationType
+	title     string
+	body      string
+	read      bool
+	createdAt time.Time
+	readAt    *time.Time
+}
+
+func newNotificationRow(notification domain.Notification) notificationRow {
+	return notificationRow{
+		id:        notification.ID,
+		userID:    notification.UserID,
+		taskID:    notification.TaskID,
+		typ:       notification.Type,
+		title:     notification.Title,
+		body:      notification.Body,
+		read:      notification.Read,
+		createdAt: notification.CreatedAt,
+		readAt:    notification.ReadAt,
+	}
+}
+
+func (r notificationRow) toDomain() domain.Notification {
+	return domain.Notification{
+		ID:        r.id,
+		UserID:    r.userID,
+		TaskID:    r.taskID,
+		Type:      r.typ,
+		Title:     r.title,
+		Body:      r.body,
+		Read:      r.read,
+		CreatedAt: r.createdAt,
+		ReadAt:    r.readAt,
+	}
+}
+
 func collectNotificationRows(rows pgx.Rows, limit uint64) ([]domain.Notification, error) {
 	notifications := make([]domain.Notification, 0, limit)
 
 	for rows.Next() {
-		var n domain.Notification
+		var row notificationRow
 
-		err := rows.Scan(&n.ID, &n.UserID, &n.TaskID, &n.Type, &n.Title, &n.Body, &n.Read, &n.CreatedAt, &n.ReadAt)
+		err := rows.Scan(&row.id, &row.userID, &row.taskID, &row.typ, &row.title, &row.body, &row.read, &row.createdAt, &row.readAt)
 		if err != nil {
 			return nil, fmt.Errorf("collectNotificationRows - rows.Scan: %w", err)
 		}
 
-		notifications = append(notifications, n)
+		notifications = append(notifications, row.toDomain())
 	}
 
 	if err := rows.Err(); err != nil {
@@ -54,10 +95,12 @@ func NewNotificationRepoWithExecutor(builder sq.StatementBuilderType, executor p
 
 // Store -.
 func (r *NotificationRepo) Store(ctx context.Context, notification *domain.Notification) error {
+	row := newNotificationRow(*notification)
+
 	sql, args, err := r.builder.
 		Insert("notifications").
 		Columns("id, user_id, task_id, type, title, body, read, created_at, read_at").
-		Values(notification.ID, notification.UserID, notification.TaskID, notification.Type, notification.Title, notification.Body, notification.Read, notification.CreatedAt, notification.ReadAt).
+		Values(row.id, row.userID, row.taskID, row.typ, row.title, row.body, row.read, row.createdAt, row.readAt).
 		ToSql()
 	if err != nil {
 		return fmt.Errorf("NotificationRepo - Store - r.Builder: %w", err)
@@ -81,10 +124,10 @@ func (r *NotificationRepo) GetByID(ctx context.Context, userID, notificationID s
 		return domain.Notification{}, fmt.Errorf("NotificationRepo - GetByID - r.Builder: %w", err)
 	}
 
-	var notification domain.Notification
+	var row notificationRow
 
 	err = r.executor.QueryRow(ctx, sql, args...).
-		Scan(&notification.ID, &notification.UserID, &notification.TaskID, &notification.Type, &notification.Title, &notification.Body, &notification.Read, &notification.CreatedAt, &notification.ReadAt)
+		Scan(&row.id, &row.userID, &row.taskID, &row.typ, &row.title, &row.body, &row.read, &row.createdAt, &row.readAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.Notification{}, domain.ErrNotificationNotFound
@@ -93,7 +136,7 @@ func (r *NotificationRepo) GetByID(ctx context.Context, userID, notificationID s
 		return domain.Notification{}, fmt.Errorf("NotificationRepo - GetByID - r.Pool.QueryRow: %w", err)
 	}
 
-	return notification, nil
+	return row.toDomain(), nil
 }
 
 // List -.
@@ -150,11 +193,13 @@ func (r *NotificationRepo) List(ctx context.Context, userID string, filter apppo
 
 // Update -.
 func (r *NotificationRepo) Update(ctx context.Context, notification *domain.Notification) error {
+	row := newNotificationRow(*notification)
+
 	sql, args, err := r.builder.
 		Update("notifications").
-		Set("read", notification.Read).
-		Set("read_at", notification.ReadAt).
-		Where(sq.Eq{"id": notification.ID, "user_id": notification.UserID}).
+		Set("read", row.read).
+		Set("read_at", row.readAt).
+		Where(sq.Eq{"id": row.id, "user_id": row.userID}).
 		ToSql()
 	if err != nil {
 		return fmt.Errorf("NotificationRepo - Update - r.Builder: %w", err)

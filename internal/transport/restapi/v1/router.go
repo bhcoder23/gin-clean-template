@@ -13,25 +13,12 @@ import (
 func NewRoutes(apiV1Group *gin.RouterGroup, n usecase.Notification, u usecase.User, tk usecase.Task, jwtManager *jwt.Manager, l logger.Interface) {
 	r := &V1{n: n, u: u, tk: tk, l: l, v: validator.New(validator.WithRequiredStructEnabled())}
 
-	authGroup := apiV1Group.Group("/auth")
-	authGroup.POST("/register", r.register)
-	authGroup.POST("/login", r.login)
+	r.registerAuthRoutes(apiV1Group)
 
 	protected := apiV1Group.Group("")
 	protected.Use(middleware.Auth(jwtManager))
 
-	userGroup := protected.Group("/user")
-	userGroup.GET("/profile", r.profile)
-
-	taskGroup := protected.Group("/tasks")
-	taskGroup.POST("", r.createTask)
-	taskGroup.GET("", r.listTasks)
-	taskGroup.GET("/:id", r.getTask)
-	taskGroup.PUT("/:id", r.updateTask)
-	taskGroup.PATCH("/:id/status", r.transitionTask)
-	taskGroup.DELETE("/:id", r.deleteTask)
-
-	notificationGroup := protected.Group("/notifications")
-	notificationGroup.GET("", r.listNotifications)
-	notificationGroup.PATCH("/:id/read", r.markNotificationRead)
+	r.registerUserRoutes(protected)
+	r.registerTaskRoutes(protected)
+	r.registerNotificationRoutes(protected)
 }

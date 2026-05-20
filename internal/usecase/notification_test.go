@@ -13,11 +13,11 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func newNotificationUseCase(t *testing.T) (*notification.UseCase, *MockNotificationStore) {
+func newNotificationUseCase(t *testing.T) (*notification.NotificationUsecase, *MockNotificationRepo) {
 	t.Helper()
 
 	ctrl := gomock.NewController(t)
-	mockRepo := NewMockNotificationStore(ctrl)
+	mockRepo := NewMockNotificationRepo(ctrl)
 
 	return notification.New(mockRepo), mockRepo
 }
