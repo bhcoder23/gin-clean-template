@@ -8,12 +8,27 @@ import (
 	"github.com/bhcoder23/gin-clean-template/pkg/rabbitmq/rmq_rpc/server"
 )
 
+// RouterDeps groups AMQP RPC adapter dependencies.
+type RouterDeps struct {
+	Notification usecase.Notification
+	User         usecase.User
+	Task         usecase.Task
+	JWTManager   *jwt.Manager
+	Logger       logger.Interface
+}
+
 // NewRouter -.
-func NewRouter(n usecase.Notification, u usecase.User, tk usecase.Task, j *jwt.Manager, l logger.Interface) map[string]server.CallHandler {
+func NewRouter(deps RouterDeps) map[string]server.CallHandler {
 	routes := make(map[string]server.CallHandler)
 
 	{
-		v1.NewRoutes(routes, n, u, tk, j, l)
+		v1.NewRoutes(routes, v1.RouterDeps{
+			Notification: deps.Notification,
+			User:         deps.User,
+			Task:         deps.Task,
+			JWTManager:   deps.JWTManager,
+			Logger:       deps.Logger,
+		})
 	}
 
 	return routes

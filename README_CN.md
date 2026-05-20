@@ -327,8 +327,9 @@ go run -tags migrate ./cmd/app
 服务器路由器以相同的风格编写：
 
 - 处理程序按应用领域分组（基于共同的基础）
-- 为每个组创建自己的路由器结构，其方法处理路径
-- 业务逻辑的结构被注入到路由器结构中，处理程序将调用它
+- 版本路由依赖通过 dependencies struct 组织，避免函数签名不断变长
+- 路由分组在版本包里显式注册
+- 业务逻辑接口注入到 router controller 中，handler 只负责调用
 
 #### `internal/transport/amqp_rpc`
 
@@ -340,11 +341,20 @@ go run -tags migrate ./cmd/app
 routes := make(map[string]server.CallHandler)
 
 {
-    v1.NewRoutes(routes, t, u, tk, j, l)
+    v1.NewRoutes(routes, v1.RouterDeps{
+        Notification: n,
+        User:         u,
+        Task:         tk,
+        JWTManager:   j,
+        Logger:       l,
+    })
 }
 
 {
-    v2.NewNotificationRoutes(routes, n, l)
+    v2.NewRoutes(routes, v2.RouterDeps{
+        Notification: n,
+        Logger:       l,
+    })
 }
 ```
 
@@ -357,15 +367,21 @@ routes := make(map[string]server.CallHandler)
 
 ```go
 {
-    v1.NewAuthRoutes(app, u, l)
-    v1.NewTaskRoutes(app, tk, l)
-    v1.NewNotificationRoutes(app, n, l)
+    v1.NewRoutes(app, v1.RouterDeps{
+        Notification: n,
+        User:         u,
+        Task:         tk,
+        Logger:       l,
+    })
 }
 
 {
-    v2.NewAuthRoutes(app, u, l)
-    v2.NewTaskRoutes(app, tk, l)
-    v2.NewNotificationRoutes(app, n, l)
+    v2.NewRoutes(app, v2.RouterDeps{
+        Notification: n,
+        User:         u,
+        Task:         tk,
+        Logger:       l,
+    })
 }
 
 reflection.Register(app)
@@ -381,11 +397,20 @@ reflection.Register(app)
 routes := make(map[string]server.CallHandler)
 
 {
-    v1.NewRoutes(routes, t, u, tk, j, l)
+    v1.NewRoutes(routes, v1.RouterDeps{
+        Notification: n,
+        User:         u,
+        Task:         tk,
+        JWTManager:   j,
+        Logger:       l,
+    })
 }
 
 {
-    v2.NewNotificationRoutes(routes, n, l)
+    v2.NewRoutes(routes, v2.RouterDeps{
+        Notification: n,
+        Logger:       l,
+    })
 }
 ```
 
@@ -398,11 +423,23 @@ routes := make(map[string]server.CallHandler)
 ```go
 apiV1Group := app.Group("/v1")
 {
-	v1.NewRoutes(apiV1Group, n, u, tk, jwtManager, l)
+	v1.NewRoutes(apiV1Group, v1.RouterDeps{
+		Notification: n,
+		User:         u,
+		Task:         tk,
+		JWTManager:   jwtManager,
+		Logger:       l,
+	})
 }
 apiV2Group := app.Group("/v2")
 {
-	v2.NewRoutes(apiV2Group, t, u, tk, jwtManager, l)
+	v2.NewRoutes(apiV2Group, v2.RouterDeps{
+		Notification: n,
+		User:         u,
+		Task:         tk,
+		JWTManager:   jwtManager,
+		Logger:       l,
+	})
 }
 ```
 

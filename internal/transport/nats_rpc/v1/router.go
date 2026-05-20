@@ -8,9 +8,25 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
+// RouterDeps groups v1 NATS RPC route dependencies.
+type RouterDeps struct {
+	Notification usecase.Notification
+	User         usecase.User
+	Task         usecase.Task
+	JWTManager   *jwt.Manager
+	Logger       logger.Interface
+}
+
 // NewRoutes -.
-func NewRoutes(routes map[string]server.CallHandler, n usecase.Notification, u usecase.User, tk usecase.Task, j *jwt.Manager, l logger.Interface) {
-	r := &V1{n: n, u: u, tk: tk, j: j, l: l, v: validator.New(validator.WithRequiredStructEnabled())}
+func NewRoutes(routes map[string]server.CallHandler, deps RouterDeps) {
+	r := &V1{
+		n:  deps.Notification,
+		u:  deps.User,
+		tk: deps.Task,
+		j:  deps.JWTManager,
+		l:  deps.Logger,
+		v:  validator.New(validator.WithRequiredStructEnabled()),
+	}
 
 	r.registerAuthRoutes(routes)
 	r.registerNotificationRoutes(routes)

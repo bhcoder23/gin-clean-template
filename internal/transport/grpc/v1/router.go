@@ -8,23 +8,19 @@ import (
 	pbgrpc "google.golang.org/grpc"
 )
 
-// NewNotificationRoutes -.
-func NewNotificationRoutes(app *pbgrpc.Server, n usecase.Notification, l logger.Interface) {
-	r := &NotificationController{n: n, l: l, v: validator.New(validator.WithRequiredStructEnabled())}
-
-	v1.RegisterNotificationServiceServer(app, r)
+// RouterDeps groups v1 gRPC route dependencies.
+type RouterDeps struct {
+	Notification usecase.Notification
+	User         usecase.User
+	Task         usecase.Task
+	Logger       logger.Interface
 }
 
-// NewAuthRoutes -.
-func NewAuthRoutes(app *pbgrpc.Server, u usecase.User, l logger.Interface) {
-	r := &AuthController{u: u, l: l, v: validator.New(validator.WithRequiredStructEnabled())}
+// NewRoutes -.
+func NewRoutes(app *pbgrpc.Server, deps RouterDeps) {
+	validate := validator.New(validator.WithRequiredStructEnabled())
 
-	v1.RegisterAuthServiceServer(app, r)
-}
-
-// NewTaskRoutes -.
-func NewTaskRoutes(app *pbgrpc.Server, tk usecase.Task, l logger.Interface) {
-	r := &TaskController{tk: tk, l: l, v: validator.New(validator.WithRequiredStructEnabled())}
-
-	v1.RegisterTaskServiceServer(app, r)
+	v1.RegisterAuthServiceServer(app, &AuthController{u: deps.User, l: deps.Logger, v: validate})
+	v1.RegisterTaskServiceServer(app, &TaskController{tk: deps.Task, l: deps.Logger, v: validate})
+	v1.RegisterNotificationServiceServer(app, &NotificationController{n: deps.Notification, l: deps.Logger, v: validate})
 }

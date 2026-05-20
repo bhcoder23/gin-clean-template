@@ -89,7 +89,13 @@ func initServers(cfg *config.Config, uc useCases, jwtManager *jwt.Manager, pg *p
 	var s servers
 
 	if enabled.rmq {
-		rmqRouter := amqprpc.NewRouter(uc.notification, uc.user, uc.task, jwtManager, l)
+		rmqRouter := amqprpc.NewRouter(amqprpc.RouterDeps{
+			Notification: uc.notification,
+			User:         uc.user,
+			Task:         uc.task,
+			JWTManager:   jwtManager,
+			Logger:       l,
+		})
 
 		rmqServer, err := rmqRPCServer.New(cfg.RMQ.URL, cfg.RMQ.ServerExchange, rmqRouter, l)
 		if err != nil {
@@ -100,7 +106,13 @@ func initServers(cfg *config.Config, uc useCases, jwtManager *jwt.Manager, pg *p
 	}
 
 	if enabled.nats {
-		natsRouter := natsrpc.NewRouter(uc.notification, uc.user, uc.task, jwtManager, l)
+		natsRouter := natsrpc.NewRouter(natsrpc.RouterDeps{
+			Notification: uc.notification,
+			User:         uc.user,
+			Task:         uc.task,
+			JWTManager:   jwtManager,
+			Logger:       l,
+		})
 
 		natsServer, err := natsRPCServer.New(cfg.NATS.URL, cfg.NATS.ServerExchange, natsRouter, l)
 		if err != nil {
@@ -118,14 +130,25 @@ func initServers(cfg *config.Config, uc useCases, jwtManager *jwt.Manager, pg *p
 				grpcmw.AuthInterceptor(jwtManager),
 			)),
 		)
-		grpc.NewRouter(grpcServer.App, uc.notification, uc.user, uc.task, l)
+		grpc.NewRouter(grpcServer.App, grpc.RouterDeps{
+			Notification: uc.notification,
+			User:         uc.user,
+			Task:         uc.task,
+			Logger:       l,
+		})
 
 		s.grpc = grpcServer
 	}
 
 	if enabled.http {
 		httpServer := httpserver.New(l, httpserver.GinMode(cfg.HTTP.Mode), httpserver.Port(cfg.HTTP.Port))
-		restapi.NewRouter(httpServer.App, cfg, uc.notification, uc.user, uc.task, jwtManager, l, restapi.ReadinessCheck(pg.Ping))
+		restapi.NewRouter(httpServer.App, cfg, restapi.RouterDeps{
+			Notification: uc.notification,
+			User:         uc.user,
+			Task:         uc.task,
+			JWTManager:   jwtManager,
+			Logger:       l,
+		}, restapi.ReadinessCheck(pg.Ping))
 
 		s.http = httpServer
 	}

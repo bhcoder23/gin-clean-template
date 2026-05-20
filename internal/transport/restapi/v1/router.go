@@ -9,16 +9,29 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
+// RouterDeps groups v1 REST route dependencies.
+type RouterDeps struct {
+	Notification usecase.Notification
+	User         usecase.User
+	Task         usecase.Task
+	JWTManager   *jwt.Manager
+	Logger       logger.Interface
+}
+
 // NewRoutes -.
-func NewRoutes(apiV1Group *gin.RouterGroup, n usecase.Notification, u usecase.User, tk usecase.Task, jwtManager *jwt.Manager, l logger.Interface) {
-	r := &V1{n: n, u: u, tk: tk, l: l, v: validator.New(validator.WithRequiredStructEnabled())}
+func NewRoutes(apiV1Group *gin.RouterGroup, deps RouterDeps) {
+	r := &V1{
+		n:  deps.Notification,
+		u:  deps.User,
+		tk: deps.Task,
+		l:  deps.Logger,
+		v:  validator.New(validator.WithRequiredStructEnabled()),
+	}
 
-	r.registerAuthRoutes(apiV1Group)
-
+	public := apiV1Group.Group("")
 	protected := apiV1Group.Group("")
-	protected.Use(middleware.Auth(jwtManager))
+	protected.Use(middleware.Auth(deps.JWTManager))
 
-	r.registerUserRoutes(protected)
-	r.registerTaskRoutes(protected)
-	r.registerNotificationRoutes(protected)
+	r.registerPublicRoutes(public)
+	r.registerProtectedRoutes(protected)
 }

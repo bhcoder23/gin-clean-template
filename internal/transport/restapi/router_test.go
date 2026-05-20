@@ -87,7 +87,10 @@ func newTestRouter(t *testing.T, opts ...restapi.Option) *gin.Engine {
 	jwtManager := jwt.New("test-secret", time.Hour)
 	l := logger.New("error")
 
-	restapi.NewRouter(app, cfg, nil, nil, nil, jwtManager, l, opts...)
+	restapi.NewRouter(app, cfg, restapi.RouterDeps{
+		JWTManager: jwtManager,
+		Logger:     l,
+	}, opts...)
 
 	return app
 }
@@ -138,7 +141,11 @@ func TestNewRouterRegistersTaskCollectionWithoutTrailingSlash(t *testing.T) {
 	jwtManager := jwt.New("test-secret", time.Hour)
 	l := logger.New("error")
 
-	restapi.NewRouter(app, cfg, nil, nil, taskUseCaseStub{}, jwtManager, l)
+	restapi.NewRouter(app, cfg, restapi.RouterDeps{
+		Task:       taskUseCaseStub{},
+		JWTManager: jwtManager,
+		Logger:     l,
+	})
 
 	token, err := jwtManager.GenerateToken("user-id-123")
 	require.NoError(t, err)
@@ -166,7 +173,11 @@ func TestNewRouterRejectsInvalidTaskPagination(t *testing.T) {
 	jwtManager := jwt.New("test-secret", time.Hour)
 	l := logger.New("error")
 
-	restapi.NewRouter(app, cfg, nil, nil, taskUseCaseWithListError{}, jwtManager, l)
+	restapi.NewRouter(app, cfg, restapi.RouterDeps{
+		Task:       taskUseCaseWithListError{},
+		JWTManager: jwtManager,
+		Logger:     l,
+	})
 
 	token, err := jwtManager.GenerateToken("user-id-123")
 	require.NoError(t, err)

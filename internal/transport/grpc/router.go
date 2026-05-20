@@ -8,12 +8,23 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
+// RouterDeps groups gRPC adapter dependencies.
+type RouterDeps struct {
+	Notification usecase.Notification
+	User         usecase.User
+	Task         usecase.Task
+	Logger       logger.Interface
+}
+
 // NewRouter -.
-func NewRouter(app *pbgrpc.Server, n usecase.Notification, u usecase.User, tk usecase.Task, l logger.Interface) {
+func NewRouter(app *pbgrpc.Server, deps RouterDeps) {
 	{
-		v1.NewAuthRoutes(app, u, l)
-		v1.NewTaskRoutes(app, tk, l)
-		v1.NewNotificationRoutes(app, n, l)
+		v1.NewRoutes(app, v1.RouterDeps{
+			Notification: deps.Notification,
+			User:         deps.User,
+			Task:         deps.Task,
+			Logger:       deps.Logger,
+		})
 	}
 
 	reflection.Register(app)

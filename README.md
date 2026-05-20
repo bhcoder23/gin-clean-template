@@ -333,8 +333,9 @@ Incoming adapter layer. The template includes 4 optional transports:
 Server routers are written in the same style:
 
 - Handlers are grouped by area of application (by a common basis)
-- For each group, its own router structure is created, the methods of which process paths
-- The structure of the business logic is injected into the router structure, which will be called by the handlers
+- Version router dependencies are grouped in a dependencies struct instead of long function signatures
+- Route groups are registered explicitly in the version package
+- Business logic interfaces are injected into the router controller, which handlers call
 
 #### `internal/transport/amqp_rpc`
 
@@ -346,11 +347,20 @@ And in the file `internal/transport/amqp_rpc/router.go` add the line:
 routes := make(map[string]server.CallHandler)
 
 {
-    v1.NewRoutes(routes, t, u, tk, j, l)
+    v1.NewRoutes(routes, v1.RouterDeps{
+        Notification: n,
+        User:         u,
+        Task:         tk,
+        JWTManager:   j,
+        Logger:       l,
+    })
 }
 
 {
-    v2.NewNotificationRoutes(routes, n, l)
+    v2.NewRoutes(routes, v2.RouterDeps{
+        Notification: n,
+        Logger:       l,
+    })
 }
 ```
 
@@ -363,15 +373,21 @@ And in the file `internal/transport/grpc/router.go` add the line:
 
 ```go
 {
-    v1.NewAuthRoutes(app, u, l)
-    v1.NewTaskRoutes(app, tk, l)
-    v1.NewNotificationRoutes(app, n, l)
+    v1.NewRoutes(app, v1.RouterDeps{
+        Notification: n,
+        User:         u,
+        Task:         tk,
+        Logger:       l,
+    })
 }
 
 {
-    v2.NewAuthRoutes(app, u, l)
-    v2.NewTaskRoutes(app, tk, l)
-    v2.NewNotificationRoutes(app, n, l)
+    v2.NewRoutes(app, v2.RouterDeps{
+        Notification: n,
+        User:         u,
+        Task:         tk,
+        Logger:       l,
+    })
 }
 
 reflection.Register(app)
@@ -387,11 +403,20 @@ And in the file `internal/transport/nats_rpc/router.go` add the line:
 routes := make(map[string]server.CallHandler)
 
 {
-    v1.NewRoutes(routes, t, u, tk, j, l)
+    v1.NewRoutes(routes, v1.RouterDeps{
+        Notification: n,
+        User:         u,
+        Task:         tk,
+        JWTManager:   j,
+        Logger:       l,
+    })
 }
 
 {
-    v2.NewNotificationRoutes(routes, n, l)
+    v2.NewRoutes(routes, v2.RouterDeps{
+        Notification: n,
+        Logger:       l,
+    })
 }
 ```
 
@@ -404,11 +429,23 @@ And in the file `internal/transport/restapi/router.go` add the line:
 ```go
 apiV1Group := app.Group("/v1")
 {
-	v1.NewRoutes(apiV1Group, n, u, tk, jwtManager, l)
+	v1.NewRoutes(apiV1Group, v1.RouterDeps{
+		Notification: n,
+		User:         u,
+		Task:         tk,
+		JWTManager:   jwtManager,
+		Logger:       l,
+	})
 }
 apiV2Group := app.Group("/v2")
 {
-	v2.NewRoutes(apiV2Group, t, u, tk, jwtManager, l)
+	v2.NewRoutes(apiV2Group, v2.RouterDeps{
+		Notification: n,
+		User:         u,
+		Task:         tk,
+		JWTManager:   jwtManager,
+		Logger:       l,
+	})
 }
 ```
 

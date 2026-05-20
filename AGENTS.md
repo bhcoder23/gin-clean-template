@@ -40,6 +40,8 @@ This file applies to the entire repository.
 - Follow the existing REST layout:
   - top-level router in `internal/transport/restapi/router.go`
   - versioned routes in `internal/transport/restapi/v1`
+  - version route dependency wiring in `internal/transport/restapi/v1/router.go`
+  - version route group registration in `internal/transport/restapi/v1/routes.go`
   - request DTOs in `internal/transport/restapi/v1/request`
   - response DTOs in `internal/transport/restapi/v1/response`
   - transport-only helpers in `internal/transport/restapi/middleware`
@@ -53,6 +55,7 @@ This file applies to the entire repository.
 ## Transport Rules
 
 - REST, gRPC, AMQP RPC, and NATS RPC are adapters over the same use cases.
+- Transport routers should group dependencies in a `RouterDeps` struct instead of growing long constructor signatures.
 - Keep transport validation at the adapter boundary, but keep core invariants in `internal/usecase` or `internal/domain` so every transport is safe.
 - Transport-specific request and response DTOs must stay inside the corresponding `internal/transport/...` tree.
 - Stable client-facing errors should be mapped through `internal/apperror`.

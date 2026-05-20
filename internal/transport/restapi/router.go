@@ -24,6 +24,15 @@ type readinessResponse struct {
 	Error string `json:"error"`
 }
 
+// RouterDeps groups REST adapter dependencies.
+type RouterDeps struct {
+	Notification usecase.Notification
+	User         usecase.User
+	Task         usecase.Task
+	JWTManager   *jwt.Manager
+	Logger       logger.Interface
+}
+
 type routerOptions struct {
 	readinessCheck   func(context.Context) error
 	readinessTimeout time.Duration
@@ -50,7 +59,7 @@ func ReadinessCheck(check func(context.Context) error) Option {
 //	@securityDefinitions.apikey BearerAuth
 //	@in header
 //	@name Authorization
-func NewRouter(app *gin.Engine, cfg *config.Config, n usecase.Notification, u usecase.User, tk usecase.Task, jwtManager *jwt.Manager, l logger.Interface, opts ...Option) {
+func NewRouter(app *gin.Engine, cfg *config.Config, deps RouterDeps, opts ...Option) {
 	options := routerOptions{readinessTimeout: _defaultReadinessTimeout}
 	for _, opt := range opts {
 		opt(&options)
@@ -62,7 +71,7 @@ func NewRouter(app *gin.Engine, cfg *config.Config, n usecase.Notification, u us
 		app.Use(middleware.Tracing(cfg.Trace.ServiceName))
 	}
 
-	app.Use(middleware.Logger(l), middleware.Recovery(l))
+	app.Use(middleware.Logger(deps.Logger), middleware.Recovery(deps.Logger))
 
 	if cfg.Metrics.Enabled {
 		app.GET("/metrics", gin.WrapH(promhttp.Handler()))
@@ -87,7 +96,7 @@ func NewRouter(app *gin.Engine, cfg *config.Config, n usecase.Notification, u us
 		defer cancel()
 
 		if err := options.readinessCheck(checkCtx); err != nil {
-			l.Error(err, "restapi - readyz")
+			deps.Logger.Error(err, "restapi - readyz")
 			ctx.AbortWithStatusJSON(http.StatusServiceUnavailable, readinessResponse{Error: "service unavailable"})
 
 			return
@@ -97,5 +106,11 @@ func NewRouter(app *gin.Engine, cfg *config.Config, n usecase.Notification, u us
 	})
 
 	apiV1Group := app.Group("/v1")
-	v1.NewRoutes(apiV1Group, n, u, tk, jwtManager, l)
+	v1.NewRoutes(apiV1Group, v1.RouterDeps{
+		Notification: deps.Notification,
+		User:         deps.User,
+		Task:         deps.Task,
+		JWTManager:   deps.JWTManager,
+		Logger:       deps.Logger,
+	})
 }
