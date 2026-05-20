@@ -18,6 +18,11 @@ This file applies to the entire repository.
 - Business rules belong in `internal/usecase` and `internal/domain`, not in handlers or middleware.
 - Repository and integration implementations should stay in `internal/infra/...`.
 - Application-facing contracts should stay in `internal/usecase/contracts.go`.
+- Keep `internal/usecase/contracts.go` grouped in this order:
+  - inbound ports consumed by transports (`User`, `Task`, `Notification`)
+  - outbound ports consumed by use case implementations and implemented by infrastructure (`UserRepo`, `TaskRepo`, `NotificationRepo`, `Transactor`, `RepoProvider`, `OutboxStore`)
+  - port data used by those contracts (`TaskFilter`, `NotificationFilter`, `OutboxEvent`)
+- Do not add framework types, persistence rows, or transport DTOs to `internal/usecase/contracts.go`.
 - `internal/usecase` may depend on ports from `internal/usecase/contracts.go`; it must not import infrastructure packages.
 - `internal/domain` should stay framework-free and persistence-free. Domain errors can live next to the model they describe.
 - `pkg/...` is for reusable technical components. Do not put application business rules there.

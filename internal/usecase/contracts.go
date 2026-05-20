@@ -10,6 +10,33 @@ import (
 
 //go:generate go tool mockgen -source=contracts.go -destination=./mocks_usecase_test.go -package=usecase_test
 
+// Inbound ports are application capabilities consumed by transport adapters.
+type (
+	// Notification -.
+	Notification interface {
+		List(ctx context.Context, userID string, unreadOnly *bool, limit, offset int) ([]domain.Notification, int, error)
+		MarkRead(ctx context.Context, userID, notificationID string) (domain.Notification, error)
+	}
+
+	// User -.
+	User interface {
+		Register(ctx context.Context, username, email, password string) (domain.User, error)
+		Login(ctx context.Context, email, password string) (string, error)
+		GetUser(ctx context.Context, userID string) (domain.User, error)
+	}
+
+	// Task -.
+	Task interface {
+		Create(ctx context.Context, userID, title, description string) (domain.Task, error)
+		Get(ctx context.Context, userID, taskID string) (domain.Task, error)
+		List(ctx context.Context, userID string, status *domain.TaskStatus, query string, limit, offset int) ([]domain.Task, int, error)
+		Update(ctx context.Context, userID, taskID, title, description string) (domain.Task, error)
+		Transition(ctx context.Context, userID, taskID string, newStatus domain.TaskStatus) (domain.Task, error)
+		Delete(ctx context.Context, userID, taskID string) error
+	}
+)
+
+// Outbound ports are infrastructure capabilities consumed by use case implementations.
 type (
 	// NotificationRepo persists notification aggregates.
 	NotificationRepo interface {
@@ -52,8 +79,11 @@ type (
 	Transactor interface {
 		WithinTx(ctx context.Context, fn func(context.Context, RepoProvider) error) error
 	}
+)
 
-	// TaskFilter -.
+// Port data is shared only by the contracts above. Keep transport DTOs and persistence rows out of this package.
+type (
+	// TaskFilter describes task repository query criteria.
 	TaskFilter struct {
 		Status *domain.TaskStatus
 		Query  string
@@ -61,7 +91,7 @@ type (
 		Offset uint64
 	}
 
-	// NotificationFilter -.
+	// NotificationFilter describes notification repository query criteria.
 	NotificationFilter struct {
 		UnreadOnly *bool
 		Limit      uint64
@@ -77,28 +107,5 @@ type (
 		Payload       []byte
 		Headers       map[string]string
 		AvailableAt   time.Time
-	}
-
-	// Notification -.
-	Notification interface {
-		List(ctx context.Context, userID string, unreadOnly *bool, limit, offset int) ([]domain.Notification, int, error)
-		MarkRead(ctx context.Context, userID, notificationID string) (domain.Notification, error)
-	}
-
-	// User -.
-	User interface {
-		Register(ctx context.Context, username, email, password string) (domain.User, error)
-		Login(ctx context.Context, email, password string) (string, error)
-		GetUser(ctx context.Context, userID string) (domain.User, error)
-	}
-
-	// Task -.
-	Task interface {
-		Create(ctx context.Context, userID, title, description string) (domain.Task, error)
-		Get(ctx context.Context, userID, taskID string) (domain.Task, error)
-		List(ctx context.Context, userID string, status *domain.TaskStatus, query string, limit, offset int) ([]domain.Task, int, error)
-		Update(ctx context.Context, userID, taskID, title, description string) (domain.Task, error)
-		Transition(ctx context.Context, userID, taskID string, newStatus domain.TaskStatus) (domain.Task, error)
-		Delete(ctx context.Context, userID, taskID string) error
 	}
 )
