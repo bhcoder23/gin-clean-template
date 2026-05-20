@@ -7,7 +7,6 @@ import (
 	"github.com/bhcoder23/gin-clean-template/internal/transport/nats_rpc/v1/request"
 	"github.com/bhcoder23/gin-clean-template/internal/transport/nats_rpc/v1/response"
 	"github.com/bhcoder23/gin-clean-template/pkg/nats/nats_rpc/server"
-	"github.com/goccy/go-json"
 	"github.com/nats-io/nats.go"
 )
 
@@ -19,10 +18,8 @@ func (r *V1) listNotifications() server.CallHandler {
 		}
 
 		var req request.ListNotificationsReq
-		if len(data) > 0 {
-			if err = json.Unmarshal(data, &req); err != nil {
-				return nil, apperror.RPC(apperror.ErrInvalidRequest)
-			}
+		if err = r.decodeOptionalAndValidate(data, &req); err != nil {
+			return nil, err
 		}
 
 		var unreadOnly *bool
@@ -49,12 +46,8 @@ func (r *V1) markNotificationRead() server.CallHandler {
 		}
 
 		var req request.MarkNotificationReadReq
-		if err = json.Unmarshal(data, &req); err != nil {
-			return nil, apperror.RPC(apperror.ErrInvalidRequest)
-		}
-
-		if err = r.v.Struct(req); err != nil {
-			return nil, apperror.RPC(apperror.ErrInvalidRequest)
+		if err = r.decodeAndValidate(data, &req); err != nil {
+			return nil, err
 		}
 
 		notification, err := r.n.MarkRead(ctx, userID, req.ID)

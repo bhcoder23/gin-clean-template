@@ -34,17 +34,7 @@ func (r *V1) createTask(ctx *gin.Context) {
 
 	var body request.CreateTaskReq
 
-	if err := ctx.ShouldBindJSON(&body); err != nil {
-		apperror.Log(r.l, err, "restapi - v1 - createTask")
-		errorResponse(ctx, http.StatusBadRequest, apperror.CodeInvalidRequest, "invalid request body")
-
-		return
-	}
-
-	if err := r.v.Struct(body); err != nil {
-		apperror.Log(r.l, err, "restapi - v1 - createTask")
-		errorResponse(ctx, http.StatusBadRequest, apperror.CodeInvalidRequest, "invalid request body")
-
+	if ok := r.bindJSON(ctx, &body, "restapi - v1 - createTask"); !ok {
 		return
 	}
 
@@ -176,17 +166,7 @@ func (r *V1) updateTask(ctx *gin.Context) {
 
 	var body request.UpdateTaskReq
 
-	if err := ctx.ShouldBindJSON(&body); err != nil {
-		apperror.Log(r.l, err, "restapi - v1 - updateTask")
-		errorResponse(ctx, http.StatusBadRequest, apperror.CodeInvalidRequest, "invalid request body")
-
-		return
-	}
-
-	if err := r.v.Struct(body); err != nil {
-		apperror.Log(r.l, err, "restapi - v1 - updateTask")
-		errorResponse(ctx, http.StatusBadRequest, apperror.CodeInvalidRequest, "invalid request body")
-
+	if ok := r.bindJSON(ctx, &body, "restapi - v1 - updateTask"); !ok {
 		return
 	}
 
@@ -226,17 +206,7 @@ func (r *V1) transitionTask(ctx *gin.Context) {
 
 	var body request.TransitionTaskReq
 
-	if err := ctx.ShouldBindJSON(&body); err != nil {
-		apperror.Log(r.l, err, "restapi - v1 - transitionTask")
-		errorResponse(ctx, http.StatusBadRequest, apperror.CodeInvalidRequest, "invalid request body")
-
-		return
-	}
-
-	if err := r.v.Struct(body); err != nil {
-		apperror.Log(r.l, err, "restapi - v1 - transitionTask")
-		errorResponse(ctx, http.StatusBadRequest, apperror.CodeInvalidRequest, "invalid request body")
-
+	if ok := r.bindJSON(ctx, &body, "restapi - v1 - transitionTask"); !ok {
 		return
 	}
 

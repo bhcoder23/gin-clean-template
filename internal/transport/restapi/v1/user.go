@@ -24,17 +24,7 @@ import (
 func (r *V1) register(ctx *gin.Context) {
 	var body request.RegisterReq
 
-	if err := ctx.ShouldBindJSON(&body); err != nil {
-		apperror.Log(r.l, err, "restapi - v1 - register")
-		errorResponse(ctx, http.StatusBadRequest, apperror.CodeInvalidRequest, "invalid request body")
-
-		return
-	}
-
-	if err := r.v.Struct(body); err != nil {
-		apperror.Log(r.l, err, "restapi - v1 - register")
-		errorResponse(ctx, http.StatusBadRequest, apperror.CodeInvalidRequest, "invalid request body")
-
+	if ok := r.bindJSON(ctx, &body, "restapi - v1 - register"); !ok {
 		return
 	}
 
@@ -64,17 +54,7 @@ func (r *V1) register(ctx *gin.Context) {
 func (r *V1) login(ctx *gin.Context) {
 	var body request.LoginReq
 
-	if err := ctx.ShouldBindJSON(&body); err != nil {
-		apperror.Log(r.l, err, "restapi - v1 - login")
-		errorResponse(ctx, http.StatusBadRequest, apperror.CodeInvalidRequest, "invalid request body")
-
-		return
-	}
-
-	if err := r.v.Struct(body); err != nil {
-		apperror.Log(r.l, err, "restapi - v1 - login")
-		errorResponse(ctx, http.StatusBadRequest, apperror.CodeInvalidRequest, "invalid request body")
-
+	if ok := r.bindJSON(ctx, &body, "restapi - v1 - login"); !ok {
 		return
 	}
 

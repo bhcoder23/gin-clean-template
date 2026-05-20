@@ -8,7 +8,6 @@ import (
 	"github.com/bhcoder23/gin-clean-template/internal/transport/nats_rpc/v1/request"
 	"github.com/bhcoder23/gin-clean-template/internal/transport/nats_rpc/v1/response"
 	"github.com/bhcoder23/gin-clean-template/pkg/nats/nats_rpc/server"
-	"github.com/goccy/go-json"
 	"github.com/nats-io/nats.go"
 )
 
@@ -21,13 +20,8 @@ func (r *V1) createTask() server.CallHandler {
 
 		var req request.CreateTaskReq
 
-		err = json.Unmarshal(data, &req)
-		if err != nil {
-			return nil, apperror.RPC(apperror.ErrInvalidRequest)
-		}
-
-		if err = r.v.Struct(req); err != nil {
-			return nil, apperror.RPC(apperror.ErrInvalidRequest)
+		if err = r.decodeAndValidate(data, &req); err != nil {
+			return nil, err
 		}
 
 		task, err := r.tk.Create(ctx, userID, req.Title, req.Description)
@@ -50,13 +44,8 @@ func (r *V1) getTask() server.CallHandler {
 
 		var req request.GetTaskReq
 
-		err = json.Unmarshal(data, &req)
-		if err != nil {
-			return nil, apperror.RPC(apperror.ErrInvalidRequest)
-		}
-
-		if err = r.v.Struct(req); err != nil {
-			return nil, apperror.RPC(apperror.ErrInvalidRequest)
+		if err = r.decodeAndValidate(data, &req); err != nil {
+			return nil, err
 		}
 
 		task, err := r.tk.Get(ctx, userID, req.ID)
@@ -79,13 +68,8 @@ func (r *V1) listTasks() server.CallHandler {
 
 		var req request.ListTasksReq
 
-		err = json.Unmarshal(data, &req)
-		if err != nil {
-			return nil, apperror.RPC(apperror.ErrInvalidRequest)
-		}
-
-		if err = r.v.Struct(req); err != nil {
-			return nil, apperror.RPC(apperror.ErrInvalidRequest)
+		if err = r.decodeAndValidate(data, &req); err != nil {
+			return nil, err
 		}
 
 		var status *domain.TaskStatus
@@ -115,13 +99,8 @@ func (r *V1) updateTask() server.CallHandler {
 
 		var req request.UpdateTaskReq
 
-		err = json.Unmarshal(data, &req)
-		if err != nil {
-			return nil, apperror.RPC(apperror.ErrInvalidRequest)
-		}
-
-		if err = r.v.Struct(req); err != nil {
-			return nil, apperror.RPC(apperror.ErrInvalidRequest)
+		if err = r.decodeAndValidate(data, &req); err != nil {
+			return nil, err
 		}
 
 		task, err := r.tk.Update(ctx, userID, req.ID, req.Title, req.Description)
@@ -144,13 +123,8 @@ func (r *V1) transitionTask() server.CallHandler {
 
 		var req request.TransitionTaskReq
 
-		err = json.Unmarshal(data, &req)
-		if err != nil {
-			return nil, apperror.RPC(apperror.ErrInvalidRequest)
-		}
-
-		if err = r.v.Struct(req); err != nil {
-			return nil, apperror.RPC(apperror.ErrInvalidRequest)
+		if err = r.decodeAndValidate(data, &req); err != nil {
+			return nil, err
 		}
 
 		task, err := r.tk.Transition(ctx, userID, req.ID, domain.TaskStatus(req.Status))
@@ -173,13 +147,8 @@ func (r *V1) deleteTask() server.CallHandler {
 
 		var req request.DeleteTaskReq
 
-		err = json.Unmarshal(data, &req)
-		if err != nil {
-			return nil, apperror.RPC(apperror.ErrInvalidRequest)
-		}
-
-		if err = r.v.Struct(req); err != nil {
-			return nil, apperror.RPC(apperror.ErrInvalidRequest)
+		if err = r.decodeAndValidate(data, &req); err != nil {
+			return nil, err
 		}
 
 		err = r.tk.Delete(ctx, userID, req.ID)
