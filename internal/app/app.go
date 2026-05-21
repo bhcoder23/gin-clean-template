@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/bhcoder23/gin-clean-template/config"
 	"github.com/bhcoder23/gin-clean-template/internal/infra/outbox"
@@ -45,6 +46,8 @@ type servers struct {
 }
 
 var errUnsupportedOutboxPublisher = errors.New("unsupported outbox publisher")
+
+const appShutdownTimeout = 10 * time.Second
 
 type transportSet struct {
 	http bool
@@ -222,15 +225,12 @@ func (s *servers) natsNotify() <-chan error {
 	return s.nats.Notify()
 }
 
-func (s *servers) waitForShutdown(l logger.Interface) {
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
-
+func (s *servers) waitForShutdown(ctx context.Context, stopApp context.CancelFunc, l logger.Interface) {
 	var err error
 
 	select {
-	case sig := <-interrupt:
-		l.Info("app - Run - signal: %s", sig.String())
+	case <-ctx.Done():
+		l.Info("app - Run - shutdown requested")
 	case err = <-s.httpNotify():
 		l.Error(fmt.Errorf("app - Run - httpServer.Notify: %w", err))
 	case err = <-s.grpcNotify():
@@ -241,6 +241,7 @@ func (s *servers) waitForShutdown(l logger.Interface) {
 		l.Error(fmt.Errorf("app - Run - natsServer.Notify: %w", err))
 	}
 
+	stopApp()
 	s.shutdownServers(l)
 }
 
@@ -270,7 +271,7 @@ func (s *servers) shutdownServers(l logger.Interface) {
 	}
 }
 
-func startOutboxRelay(cfg *config.Config, pg *postgres.Postgres, l logger.Interface) (func() error, error) {
+func startOutboxRelay(ctx context.Context, cfg *config.Config, pg *postgres.Postgres, l logger.Interface) (func() error, error) {
 	if !cfg.Outbox.Enabled {
 		return func() error { return nil }, nil
 	}
@@ -296,7 +297,7 @@ func startOutboxRelay(cfg *config.Config, pg *postgres.Postgres, l logger.Interf
 		LockTimeout:    cfg.Outbox.LockTimeout,
 		PublishTimeout: cfg.Outbox.PublishTimeout,
 	})
-	relay.Start(context.Background())
+	relay.Start(ctx)
 
 	return func() error {
 		defer publisher.Shutdown()
@@ -309,6 +310,9 @@ func startOutboxRelay(cfg *config.Config, pg *postgres.Postgres, l logger.Interf
 func Run(cfg *config.Config) {
 	l := logger.New(cfg.Log.Level)
 
+	appCtx, stopApp := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stopApp()
+
 	shutdownTracing, err := observability.InitTracing(observability.TraceConfig{
 		Enabled:     cfg.Trace.Enabled,
 		Exporter:    cfg.Trace.Exporter,
@@ -319,7 +323,10 @@ func Run(cfg *config.Config) {
 	}
 
 	defer func() {
-		if err := shutdownTracing(context.Background()); err != nil {
+		shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(appCtx), appShutdownTimeout)
+		defer cancel()
+
+		if err := shutdownTracing(shutdownCtx); err != nil {
 			l.Error(fmt.Errorf("app - Run - shutdownTracing: %w", err))
 		}
 	}()
@@ -331,7 +338,7 @@ func Run(cfg *config.Config) {
 	}
 	defer pg.Close()
 
-	shutdownOutbox, err := startOutboxRelay(cfg, pg, l)
+	shutdownOutbox, err := startOutboxRelay(appCtx, cfg, pg, l)
 	if err != nil {
 		l.Fatal(fmt.Errorf("app - Run - startOutboxRelay: %w", err))
 	}
@@ -348,5 +355,5 @@ func Run(cfg *config.Config) {
 	uc := initUseCases(pg, jwtManager)
 	s := initServers(cfg, uc, jwtManager, pg, l)
 	s.startServers()
-	s.waitForShutdown(l)
+	s.waitForShutdown(appCtx, stopApp, l)
 }

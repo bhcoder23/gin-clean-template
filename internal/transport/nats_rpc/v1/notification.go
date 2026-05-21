@@ -35,23 +35,15 @@ func (r *V1) listNotifications() server.CallHandler {
 	}
 }
 
-//nolint:dupl // RPC handlers stay explicit per route; shared binding/error mapping is already factored.
 func (r *V1) markNotificationRead() server.CallHandler {
-	return func(ctx context.Context, msg *nats.Msg) (any, error) {
-		var req request.MarkNotificationReadReq
+	return authenticatedCall(r, "nats_rpc - V1 - markNotificationRead",
+		func(ctx context.Context, userID string, req *request.MarkNotificationReadReq) (any, error) {
+			notification, err := r.n.MarkRead(ctx, userID, req.ID)
+			if err != nil {
+				return nil, err
+			}
 
-		userID, err := r.bindAuthenticatedRequest(msg, &req)
-		if err != nil {
-			return nil, err
-		}
-
-		notification, err := r.n.MarkRead(ctx, userID, req.ID)
-		if err != nil {
-			apperror.Log(r.l, err, "nats_rpc - V1 - markNotificationRead")
-
-			return nil, apperror.RPC(err)
-		}
-
-		return response.NewNotificationResp(&notification), nil
-	}
+			return response.NewNotificationResp(&notification), nil
+		},
+	)
 }

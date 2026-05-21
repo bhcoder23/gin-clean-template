@@ -31,25 +31,17 @@ func (r *V1) createTask() server.CallHandler {
 	}
 }
 
-//nolint:dupl // RPC handlers stay explicit per route; shared binding/error mapping is already factored.
 func (r *V1) getTask() server.CallHandler {
-	return func(ctx context.Context, d *amqp.Delivery) (any, error) {
-		var req request.GetTaskReq
+	return authenticatedCall(r, "amqp_rpc - V1 - getTask",
+		func(ctx context.Context, userID string, req *request.GetTaskReq) (any, error) {
+			task, err := r.tk.Get(ctx, userID, req.ID)
+			if err != nil {
+				return nil, err
+			}
 
-		userID, err := r.bindAuthenticatedRequest(d, &req)
-		if err != nil {
-			return nil, err
-		}
-
-		task, err := r.tk.Get(ctx, userID, req.ID)
-		if err != nil {
-			apperror.Log(r.l, err, "amqp_rpc - V1 - getTask")
-
-			return nil, apperror.RPC(err)
-		}
-
-		return response.NewTaskResp(&task), nil
-	}
+			return response.NewTaskResp(&task), nil
+		},
+	)
 }
 
 func (r *V1) listTasks() server.CallHandler {
