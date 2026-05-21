@@ -114,6 +114,7 @@ This file applies to the entire repository.
   - `go tool golangci-lint run`
 - If transport/runtime behavior changes and Docker is available, also run:
   - `make compose-up-integration-test`
+- Integration tests are behind the `integration` build tag. Do not include `./integration-test/...` in normal unit-test commands.
 - The repository expects Go toolchain auto-selection. If local Go is older than `go.mod`, run commands with `GOTOOLCHAIN=auto` or use `make` targets.
 
 ## Tests and Mocks

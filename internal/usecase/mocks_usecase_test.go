@@ -18,6 +18,244 @@ import (
 	gomock "go.uber.org/mock/gomock"
 )
 
+// MockNotification is a mock of Notification interface.
+type MockNotification struct {
+	ctrl     *gomock.Controller
+	recorder *MockNotificationMockRecorder
+	isgomock struct{}
+}
+
+// MockNotificationMockRecorder is the mock recorder for MockNotification.
+type MockNotificationMockRecorder struct {
+	mock *MockNotification
+}
+
+// NewMockNotification creates a new mock instance.
+func NewMockNotification(ctrl *gomock.Controller) *MockNotification {
+	mock := &MockNotification{ctrl: ctrl}
+	mock.recorder = &MockNotificationMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockNotification) EXPECT() *MockNotificationMockRecorder {
+	return m.recorder
+}
+
+// List mocks base method.
+func (m *MockNotification) List(ctx context.Context, userID string, unreadOnly *bool, limit, offset int) ([]domain.Notification, int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, userID, unreadOnly, limit, offset)
+	ret0, _ := ret[0].([]domain.Notification)
+	ret1, _ := ret[1].(int)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// List indicates an expected call of List.
+func (mr *MockNotificationMockRecorder) List(ctx, userID, unreadOnly, limit, offset any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockNotification)(nil).List), ctx, userID, unreadOnly, limit, offset)
+}
+
+// MarkRead mocks base method.
+func (m *MockNotification) MarkRead(ctx context.Context, userID, notificationID string) (domain.Notification, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkRead", ctx, userID, notificationID)
+	ret0, _ := ret[0].(domain.Notification)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MarkRead indicates an expected call of MarkRead.
+func (mr *MockNotificationMockRecorder) MarkRead(ctx, userID, notificationID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkRead", reflect.TypeOf((*MockNotification)(nil).MarkRead), ctx, userID, notificationID)
+}
+
+// MockUser is a mock of User interface.
+type MockUser struct {
+	ctrl     *gomock.Controller
+	recorder *MockUserMockRecorder
+	isgomock struct{}
+}
+
+// MockUserMockRecorder is the mock recorder for MockUser.
+type MockUserMockRecorder struct {
+	mock *MockUser
+}
+
+// NewMockUser creates a new mock instance.
+func NewMockUser(ctrl *gomock.Controller) *MockUser {
+	mock := &MockUser{ctrl: ctrl}
+	mock.recorder = &MockUserMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockUser) EXPECT() *MockUserMockRecorder {
+	return m.recorder
+}
+
+// GetUser mocks base method.
+func (m *MockUser) GetUser(ctx context.Context, userID string) (domain.User, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUser", ctx, userID)
+	ret0, _ := ret[0].(domain.User)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetUser indicates an expected call of GetUser.
+func (mr *MockUserMockRecorder) GetUser(ctx, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUser", reflect.TypeOf((*MockUser)(nil).GetUser), ctx, userID)
+}
+
+// Login mocks base method.
+func (m *MockUser) Login(ctx context.Context, email, password string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Login", ctx, email, password)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Login indicates an expected call of Login.
+func (mr *MockUserMockRecorder) Login(ctx, email, password any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Login", reflect.TypeOf((*MockUser)(nil).Login), ctx, email, password)
+}
+
+// Register mocks base method.
+func (m *MockUser) Register(ctx context.Context, username, email, password string) (domain.User, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Register", ctx, username, email, password)
+	ret0, _ := ret[0].(domain.User)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Register indicates an expected call of Register.
+func (mr *MockUserMockRecorder) Register(ctx, username, email, password any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Register", reflect.TypeOf((*MockUser)(nil).Register), ctx, username, email, password)
+}
+
+// MockTask is a mock of Task interface.
+type MockTask struct {
+	ctrl     *gomock.Controller
+	recorder *MockTaskMockRecorder
+	isgomock struct{}
+}
+
+// MockTaskMockRecorder is the mock recorder for MockTask.
+type MockTaskMockRecorder struct {
+	mock *MockTask
+}
+
+// NewMockTask creates a new mock instance.
+func NewMockTask(ctrl *gomock.Controller) *MockTask {
+	mock := &MockTask{ctrl: ctrl}
+	mock.recorder = &MockTaskMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockTask) EXPECT() *MockTaskMockRecorder {
+	return m.recorder
+}
+
+// Create mocks base method.
+func (m *MockTask) Create(ctx context.Context, userID, title, description string) (domain.Task, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", ctx, userID, title, description)
+	ret0, _ := ret[0].(domain.Task)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockTaskMockRecorder) Create(ctx, userID, title, description any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockTask)(nil).Create), ctx, userID, title, description)
+}
+
+// Delete mocks base method.
+func (m *MockTask) Delete(ctx context.Context, userID, taskID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", ctx, userID, taskID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockTaskMockRecorder) Delete(ctx, userID, taskID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockTask)(nil).Delete), ctx, userID, taskID)
+}
+
+// Get mocks base method.
+func (m *MockTask) Get(ctx context.Context, userID, taskID string) (domain.Task, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", ctx, userID, taskID)
+	ret0, _ := ret[0].(domain.Task)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockTaskMockRecorder) Get(ctx, userID, taskID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockTask)(nil).Get), ctx, userID, taskID)
+}
+
+// List mocks base method.
+func (m *MockTask) List(ctx context.Context, userID string, status *domain.TaskStatus, query string, limit, offset int) ([]domain.Task, int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, userID, status, query, limit, offset)
+	ret0, _ := ret[0].([]domain.Task)
+	ret1, _ := ret[1].(int)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// List indicates an expected call of List.
+func (mr *MockTaskMockRecorder) List(ctx, userID, status, query, limit, offset any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockTask)(nil).List), ctx, userID, status, query, limit, offset)
+}
+
+// Transition mocks base method.
+func (m *MockTask) Transition(ctx context.Context, userID, taskID string, newStatus domain.TaskStatus) (domain.Task, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Transition", ctx, userID, taskID, newStatus)
+	ret0, _ := ret[0].(domain.Task)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Transition indicates an expected call of Transition.
+func (mr *MockTaskMockRecorder) Transition(ctx, userID, taskID, newStatus any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Transition", reflect.TypeOf((*MockTask)(nil).Transition), ctx, userID, taskID, newStatus)
+}
+
+// Update mocks base method.
+func (m *MockTask) Update(ctx context.Context, userID, taskID, title, description string) (domain.Task, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Update", ctx, userID, taskID, title, description)
+	ret0, _ := ret[0].(domain.Task)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockTaskMockRecorder) Update(ctx, userID, taskID, title, description any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockTask)(nil).Update), ctx, userID, taskID, title, description)
+}
+
 // MockNotificationRepo is a mock of NotificationRepo interface.
 type MockNotificationRepo struct {
 	ctrl     *gomock.Controller
@@ -420,242 +658,4 @@ func (m *MockTransactor) WithinTx(ctx context.Context, fn func(context.Context, 
 func (mr *MockTransactorMockRecorder) WithinTx(ctx, fn any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WithinTx", reflect.TypeOf((*MockTransactor)(nil).WithinTx), ctx, fn)
-}
-
-// MockNotification is a mock of Notification interface.
-type MockNotification struct {
-	ctrl     *gomock.Controller
-	recorder *MockNotificationMockRecorder
-	isgomock struct{}
-}
-
-// MockNotificationMockRecorder is the mock recorder for MockNotification.
-type MockNotificationMockRecorder struct {
-	mock *MockNotification
-}
-
-// NewMockNotification creates a new mock instance.
-func NewMockNotification(ctrl *gomock.Controller) *MockNotification {
-	mock := &MockNotification{ctrl: ctrl}
-	mock.recorder = &MockNotificationMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockNotification) EXPECT() *MockNotificationMockRecorder {
-	return m.recorder
-}
-
-// List mocks base method.
-func (m *MockNotification) List(ctx context.Context, userID string, unreadOnly *bool, limit, offset int) ([]domain.Notification, int, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", ctx, userID, unreadOnly, limit, offset)
-	ret0, _ := ret[0].([]domain.Notification)
-	ret1, _ := ret[1].(int)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
-}
-
-// List indicates an expected call of List.
-func (mr *MockNotificationMockRecorder) List(ctx, userID, unreadOnly, limit, offset any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockNotification)(nil).List), ctx, userID, unreadOnly, limit, offset)
-}
-
-// MarkRead mocks base method.
-func (m *MockNotification) MarkRead(ctx context.Context, userID, notificationID string) (domain.Notification, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MarkRead", ctx, userID, notificationID)
-	ret0, _ := ret[0].(domain.Notification)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// MarkRead indicates an expected call of MarkRead.
-func (mr *MockNotificationMockRecorder) MarkRead(ctx, userID, notificationID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkRead", reflect.TypeOf((*MockNotification)(nil).MarkRead), ctx, userID, notificationID)
-}
-
-// MockUser is a mock of User interface.
-type MockUser struct {
-	ctrl     *gomock.Controller
-	recorder *MockUserMockRecorder
-	isgomock struct{}
-}
-
-// MockUserMockRecorder is the mock recorder for MockUser.
-type MockUserMockRecorder struct {
-	mock *MockUser
-}
-
-// NewMockUser creates a new mock instance.
-func NewMockUser(ctrl *gomock.Controller) *MockUser {
-	mock := &MockUser{ctrl: ctrl}
-	mock.recorder = &MockUserMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockUser) EXPECT() *MockUserMockRecorder {
-	return m.recorder
-}
-
-// GetUser mocks base method.
-func (m *MockUser) GetUser(ctx context.Context, userID string) (domain.User, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetUser", ctx, userID)
-	ret0, _ := ret[0].(domain.User)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetUser indicates an expected call of GetUser.
-func (mr *MockUserMockRecorder) GetUser(ctx, userID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUser", reflect.TypeOf((*MockUser)(nil).GetUser), ctx, userID)
-}
-
-// Login mocks base method.
-func (m *MockUser) Login(ctx context.Context, email, password string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Login", ctx, email, password)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Login indicates an expected call of Login.
-func (mr *MockUserMockRecorder) Login(ctx, email, password any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Login", reflect.TypeOf((*MockUser)(nil).Login), ctx, email, password)
-}
-
-// Register mocks base method.
-func (m *MockUser) Register(ctx context.Context, username, email, password string) (domain.User, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Register", ctx, username, email, password)
-	ret0, _ := ret[0].(domain.User)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Register indicates an expected call of Register.
-func (mr *MockUserMockRecorder) Register(ctx, username, email, password any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Register", reflect.TypeOf((*MockUser)(nil).Register), ctx, username, email, password)
-}
-
-// MockTask is a mock of Task interface.
-type MockTask struct {
-	ctrl     *gomock.Controller
-	recorder *MockTaskMockRecorder
-	isgomock struct{}
-}
-
-// MockTaskMockRecorder is the mock recorder for MockTask.
-type MockTaskMockRecorder struct {
-	mock *MockTask
-}
-
-// NewMockTask creates a new mock instance.
-func NewMockTask(ctrl *gomock.Controller) *MockTask {
-	mock := &MockTask{ctrl: ctrl}
-	mock.recorder = &MockTaskMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockTask) EXPECT() *MockTaskMockRecorder {
-	return m.recorder
-}
-
-// Create mocks base method.
-func (m *MockTask) Create(ctx context.Context, userID, title, description string) (domain.Task, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", ctx, userID, title, description)
-	ret0, _ := ret[0].(domain.Task)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Create indicates an expected call of Create.
-func (mr *MockTaskMockRecorder) Create(ctx, userID, title, description any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockTask)(nil).Create), ctx, userID, title, description)
-}
-
-// Delete mocks base method.
-func (m *MockTask) Delete(ctx context.Context, userID, taskID string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", ctx, userID, taskID)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Delete indicates an expected call of Delete.
-func (mr *MockTaskMockRecorder) Delete(ctx, userID, taskID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockTask)(nil).Delete), ctx, userID, taskID)
-}
-
-// Get mocks base method.
-func (m *MockTask) Get(ctx context.Context, userID, taskID string) (domain.Task, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", ctx, userID, taskID)
-	ret0, _ := ret[0].(domain.Task)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Get indicates an expected call of Get.
-func (mr *MockTaskMockRecorder) Get(ctx, userID, taskID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockTask)(nil).Get), ctx, userID, taskID)
-}
-
-// List mocks base method.
-func (m *MockTask) List(ctx context.Context, userID string, status *domain.TaskStatus, query string, limit, offset int) ([]domain.Task, int, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", ctx, userID, status, query, limit, offset)
-	ret0, _ := ret[0].([]domain.Task)
-	ret1, _ := ret[1].(int)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
-}
-
-// List indicates an expected call of List.
-func (mr *MockTaskMockRecorder) List(ctx, userID, status, query, limit, offset any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockTask)(nil).List), ctx, userID, status, query, limit, offset)
-}
-
-// Transition mocks base method.
-func (m *MockTask) Transition(ctx context.Context, userID, taskID string, newStatus domain.TaskStatus) (domain.Task, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Transition", ctx, userID, taskID, newStatus)
-	ret0, _ := ret[0].(domain.Task)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Transition indicates an expected call of Transition.
-func (mr *MockTaskMockRecorder) Transition(ctx, userID, taskID, newStatus any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Transition", reflect.TypeOf((*MockTask)(nil).Transition), ctx, userID, taskID, newStatus)
-}
-
-// Update mocks base method.
-func (m *MockTask) Update(ctx context.Context, userID, taskID, title, description string) (domain.Task, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", ctx, userID, taskID, title, description)
-	ret0, _ := ret[0].(domain.Task)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Update indicates an expected call of Update.
-func (mr *MockTaskMockRecorder) Update(ctx, userID, taskID, title, description any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockTask)(nil).Update), ctx, userID, taskID, title, description)
 }

@@ -67,14 +67,19 @@
 第一次体验建议走 HTTP-first 路径，这样更容易看清脚手架骨架，也方便后续裁剪：
 
 ```sh
-# 启动 PostgreSQL、RabbitMQ、NATS，便于本地实验
+# 启动 PostgreSQL，走默认 HTTP-first 本地路径
 make compose-up
 
 # 执行迁移并启动当前启用的 transport
 make run
 ```
 
-如果要一次查看所有演示 adapter，可以使用 `make run-all-transports`。
+如果要一次查看所有演示 adapter，先启动可选 broker，再使用 `make run-all-transports`。
+
+```sh
+make compose-up-adapters
+make run-all-transports
+```
 
 服务起来后，最快理解这个脚手架的方式，就是顺着一条完整的 REST 业务链路走一遍。
 
@@ -183,22 +188,24 @@ CRUD 操作，支持状态状态机。
 Docker 不是必选项。`.env.example` 默认只开启 HTTP；gRPC、RabbitMQ RPC、NATS RPC 都是可选项。Docker Compose 演示栈会在需要完整 adapter 集合时显式打开这些开关。
 
 ```sh
-# 完整演示默认需要 PostgreSQL、RabbitMQ、NATS
+# 默认 HTTP-first 路径只需要 PostgreSQL
 make compose-up
-# Run app with migrations
+# 执行迁移并启动应用
 make run
 ```
 
 如果你想忽略当前 `.env`，强制把所有演示 transport 都跑起来，可以直接执行：
 
 ```sh
+make compose-up-adapters
 make run-all-transports
 ```
 
-### Integration tests (can be run in CI)
+### Integration tests
 
 ```sh
-# DB, app + migrations, integration tests
+# DB, app + migrations, integration tests.
+# 这些测试需要 integration build tag，通常由 Jenkins 或其他流水线执行。
 make compose-up-integration-test
 ```
 
@@ -294,6 +301,7 @@ Protobuf 文件。它们用于为 gRPC 服务生成 Go 代码。
 
 集成测试
 它会在应用容器旁启动独立的容器
+普通 `go test ./...` 不会执行这批测试；直接运行时需要 `integration` build tag。
 
 ## `internal/app`
 

@@ -69,14 +69,19 @@ The demo domains can be exposed through all four transports (REST, gRPC, AMQP RP
 Use the HTTP-first path first. It keeps the template easy to trim while still exercising the main scaffold:
 
 ```sh
-# Start PostgreSQL, RabbitMQ, and NATS for local experiments
+# Start PostgreSQL for the HTTP-first local path
 make compose-up
 
 # Run migrations and start the enabled transports
 make run
 ```
 
-To inspect every demo adapter in one process, use `make run-all-transports`.
+To inspect every demo adapter in one process, start the optional brokers first, then use `make run-all-transports`.
+
+```sh
+make compose-up-adapters
+make run-all-transports
+```
 
 Once the app is running, the fastest way to understand the scaffold is to walk one complete REST flow end to end.
 
@@ -185,7 +190,7 @@ Task activity notifications persisted in PostgreSQL and exposed through every tr
 Docker is optional. `.env.example` starts HTTP only; gRPC, RabbitMQ RPC, and NATS RPC are opt-in. The Docker Compose demo stack sets those flags explicitly when it needs the full adapter set.
 
 ```sh
-# PostgreSQL, RabbitMQ, and NATS for the full demo
+# PostgreSQL for the default HTTP-first path
 make compose-up
 # Run app with migrations
 make run
@@ -194,13 +199,15 @@ make run
 To force all demo transports on regardless of your current `.env`, use:
 
 ```sh
+make compose-up-adapters
 make run-all-transports
 ```
 
-### Integration tests (can be run in CI)
+### Integration tests
 
 ```sh
-# DB, app + migrations, integration tests
+# DB, app + migrations, integration tests.
+# These tests require the integration build tag and are usually run by Jenkins or another pipeline runner.
 make compose-up-integration-test
 ```
 
@@ -298,6 +305,7 @@ You don't need to correct anything by yourself.
 
 Integration tests.
 They are launched as a separate container, next to the application container.
+They are excluded from normal `go test ./...` runs and require the `integration` build tag when run directly.
 
 ### `internal/app`
 
