@@ -20,15 +20,14 @@ General-purpose Clean Architecture template for Go backends, maintained by `bhco
 
 ## Overview
 
-The purpose of the template is to show:
-
-- how to organize a project and prevent it from turning into spaghetti code
-- where to store business logic so that it remains independent, clean, and extensible
-- how not to lose control when a microservice grows
-
-Using the principles of Robert Martin (aka Uncle Bob).
-
 This repository is the Gin-based backend scaffold maintained by `bhcoder23`.
+
+The template focuses on code organization that stays useful after a project leaves the demo stage:
+
+- keep domain and use case code independent from HTTP, gRPC, brokers, and database drivers
+- keep transport adapters thin and replaceable
+- make transaction, error, request ID, logging, tracing, and outbox boundaries explicit
+- keep optional adapters easy to remove from derived projects
 
 Inspired by the original MIT-licensed project:
 - [evrone/go-clean-template](https://github.com/evrone/go-clean-template)
@@ -37,7 +36,7 @@ This template is one application process with multiple transport adapters:
 
 - AMQP RPC (based on RabbitMQ as [transport](https://github.com/rabbitmq/amqp091-go)
   and [Request-Reply pattern](https://www.enterpriseintegrationpatterns.com/patterns/messaging/RequestReply.html))
-- MQ RPC (based on NATS as [transport](https://github.com/nats-io/nats.go)
+- NATS RPC (based on NATS as [transport](https://github.com/nats-io/nats.go)
   and [Request-Reply pattern](https://www.enterpriseintegrationpatterns.com/patterns/messaging/RequestReply.html))
 - gRPC ([gRPC](https://grpc.io/) framework based on protobuf)
 - REST API ([Gin](https://github.com/gin-gonic/gin) framework)
@@ -309,17 +308,16 @@ They are excluded from normal `go test ./...` runs and require the `integration`
 
 ### `internal/app`
 
-There is always one _Run_ function in the `app.go` file, which "continues" the _main_ function.
+Runtime composition lives here. `Run` creates infrastructure, repositories, use cases, optional outbox relay, and enabled transport servers.
 
-This is where all the main objects are created.
-Dependency injection occurs through the "New ..." constructors (see Dependency Injection).
-This technique allows us to layer the application using the [Dependency Injection](#dependency-injection) principle.
-This makes the business logic independent from other layers.
+The application is one process that can start multiple adapters. Which servers are started is controlled by:
 
-Next, we start the server and wait for signals in _select_ for graceful completion.
-If `app.go` starts to grow, you can split it into multiple files.
+- `HTTP_ENABLED`
+- `GRPC_ENABLED`
+- `RMQ_ENABLED`
+- `NATS_ENABLED`
 
-For a large number of injections, [wire](https://github.com/google/wire) can be used.
+Shutdown is coordinated through an application root context. If the wiring grows beyond simple constructor calls, a DI generator such as [wire](https://github.com/google/wire) can be introduced later, but the scaffold keeps explicit constructors by default.
 
 The `migrate.go` file is used for database auto migrations.
 It is included if an argument with the _migrate_ tag is specified.
@@ -340,127 +338,28 @@ Incoming adapter layer. The template includes 4 optional transports:
 
 Server routers are written in the same style:
 
-- Handlers are grouped by area of application (by a common basis)
-- Version router dependencies are grouped in a dependencies struct instead of long function signatures
+- Handlers are grouped by application area
+- Version router dependencies are grouped in a `RouterDeps` struct instead of long function signatures
 - Route groups are registered explicitly in the version package
 - Business logic interfaces are injected into the router controller, which handlers call
 
 #### `internal/transport/amqp_rpc`
 
-Simple RPC versioning.
-For v2, we will need to add the `amqp_rpc/v2` folder with the same content.
-And in the file `internal/transport/amqp_rpc/router.go` add the line:
-
-```go
-routes := make(map[string]server.CallHandler)
-
-{
-    v1.NewRoutes(routes, v1.RouterDeps{
-        Notification: n,
-        User:         u,
-        Task:         tk,
-        JWTManager:   j,
-        Logger:       l,
-    })
-}
-
-{
-    v2.NewRoutes(routes, v2.RouterDeps{
-        Notification: n,
-        Logger:       l,
-    })
-}
-```
+AMQP request/reply adapter backed by RabbitMQ. Routes are registered in `amqp_rpc/v1/routes.go`; auth binding, request validation, error mapping, and request ID propagation stay inside this adapter.
 
 #### `internal/transport/grpc`
 
-Simple gRPC versioning.
-For v2, we will need to add the `grpc/v2` folder with the same content.
-Also add the `v2` folder to the proto files in `docs/proto`.
-And in the file `internal/transport/grpc/router.go` add the line:
-
-```go
-{
-    v1.NewRoutes(app, v1.RouterDeps{
-        Notification: n,
-        User:         u,
-        Task:         tk,
-        Logger:       l,
-    })
-}
-
-{
-    v2.NewRoutes(app, v2.RouterDeps{
-        Notification: n,
-        User:         u,
-        Task:         tk,
-        Logger:       l,
-    })
-}
-
-reflection.Register(app)
-```
+gRPC adapter backed by generated protobuf code under `docs/proto/v1`. Stable application errors are mapped to gRPC status codes and carry the client-facing code as `google.rpc.ErrorInfo.reason`.
 
 #### `internal/transport/nats_rpc`
 
-Simple RPC versioning.
-For v2, we will need to add the `nats_rpc/v2` folder with the same content.
-And in the file `internal/transport/nats_rpc/router.go` add the line:
-
-```go
-routes := make(map[string]server.CallHandler)
-
-{
-    v1.NewRoutes(routes, v1.RouterDeps{
-        Notification: n,
-        User:         u,
-        Task:         tk,
-        JWTManager:   j,
-        Logger:       l,
-    })
-}
-
-{
-    v2.NewRoutes(routes, v2.RouterDeps{
-        Notification: n,
-        Logger:       l,
-    })
-}
-```
+NATS request/reply adapter. It follows the same controller, route, request, and response layout as AMQP RPC so optional transports remain easy to compare or remove.
 
 #### `internal/transport/restapi`
 
-Simple REST versioning.
-For v2, we will need to add the `restapi/v2` folder with the same content.
-And in the file `internal/transport/restapi/router.go` add the line:
+Gin REST adapter. Top-level runtime endpoints such as `/healthz`, `/readyz`, `/metrics`, and `/swagger/*any` are registered in `internal/transport/restapi/router.go`; versioned API routes live under `internal/transport/restapi/v1`.
 
-```go
-apiV1Group := app.Group("/v1")
-{
-	v1.NewRoutes(apiV1Group, v1.RouterDeps{
-		Notification: n,
-		User:         u,
-		Task:         tk,
-		JWTManager:   jwtManager,
-		Logger:       l,
-	})
-}
-apiV2Group := app.Group("/v2")
-{
-	v2.NewRoutes(apiV2Group, v2.RouterDeps{
-		Notification: n,
-		User:         u,
-		Task:         tk,
-		JWTManager:   jwtManager,
-		Logger:       l,
-	})
-}
-```
-
-Instead of [Gin](https://github.com/gin-gonic/gin), you can use any other http framework.
-
-In `router.go` and above the handler methods, there are comments for generating swagger documentation
-using [swag](https://github.com/swaggo/swag).
+REST request DTOs live in `v1/request`, response DTOs live in `v1/response`, and route groups are registered in `v1/routes.go`. Swagger annotations live next to the handlers and are generated with [swag](https://github.com/swaggo/swag).
 
 ### `internal/domain`
 
@@ -471,9 +370,9 @@ This layer contains entities, enums, value objects, and domain errors that shoul
 
 Application business logic.
 
-- Methods are grouped by area of application (on a common basis)
-- Each group has its own structure
-- One file - one structure
+- Use case implementations live in domain-oriented subpackages such as `internal/usecase/task`
+- Application-facing contracts live in `internal/usecase/contracts.go`
+- Use cases move `internal/domain` values across business boundaries
 
 Use cases depend on contracts defined in `internal/usecase/contracts.go`.
 Persistence implementations, transport adapters, and reusable technical packages are injected into use cases
@@ -483,94 +382,71 @@ Persistence implementations, transport adapters, and reusable technical packages
 
 Persistence implementations for PostgreSQL-backed repositories used by the use case layer.
 
-### `pkg/rabbitmq`
+### `pkg`
 
-RabbitMQ RPC pattern:
+Reusable technical components live here. They are not allowed to contain application business rules.
 
-- There is no routing inside RabbitMQ
-- Exchange fanout is used, to which 1 exclusive queue is bound, this is the most productive config
-- Reconnect on the loss of connection
+Current examples include:
+
+- `pkg/httpserver` and `pkg/grpcserver` server wrappers
+- `pkg/postgres` connection pool and transaction executor helpers
+- `pkg/logger` zerolog adapter
+- `pkg/requestid` request/correlation ID helpers
+- `pkg/rabbitmq` and `pkg/nats` request/reply primitives
+- `pkg/observability` optional OpenTelemetry setup
 
 ## Dependency Injection
 
-In order to remove the dependence of business logic on external packages, dependency injection is used.
+The scaffold uses explicit constructor injection. The goal is not to hide dependencies; it is to make boundaries visible.
 
-For example, through the New constructor, we inject the dependency into the structure of the business logic.
-This makes the business logic independent (and portable).
-We can override the implementation of the interface without making changes to the `usecase` package.
+The normal direction is:
+
+- `internal/app` creates concrete infrastructure and use case implementations
+- `internal/usecase` defines the contracts it needs
+- `internal/infra/...` implements outbound contracts such as repositories and outbox storage
+- `internal/transport/...` consumes inbound use case contracts
+
+For example, the task use case receives repository ports and an optional transaction port:
 
 ```go
-package usecase
-
-import (
-// Nothing!
-)
-
-type Repository interface {
-	Get()
-}
-
-type ProjectUsecase struct {
-	repo Repository
-}
-
-func New(r Repository) *ProjectUsecase {
-	return &ProjectUsecase{
-		repo: r,
-	}
-}
-
-func (uc *ProjectUsecase) Do() {
-	uc.repo.Get()
-}
+task.New(taskRepo, notificationRepo, transactor)
 ```
 
-It will also allow us to do auto-generation of mocks (for example with [go.uber.org/mock](https://go.uber.org/mock)) and
-easily write unit tests.
+Tests use generated mocks from `internal/usecase/contracts.go`:
 
-> We are not tied to specific implementations in order to always be able to change one component to another.
-> If the new component implements the interface, nothing needs to be changed in the business logic.
+```sh
+make mock
+```
+
+If wiring grows too large, introduce [wire](https://github.com/google/wire) or another DI generator at the application boundary. Keep the contracts and dependency direction unchanged.
 
 ## Clean Architecture
 
-### Key idea
+### Current Rules
 
-Programmers realize the optimal architecture for an application after most of the code has been written.
+The repository follows a pragmatic ports-and-adapters layout:
 
-> A good architecture allows decisions to be delayed to as late as possible.
+- `internal/domain` contains framework-free domain models, domain errors, enums, and model-level rules
+- `internal/usecase` contains application workflows and the contracts those workflows need
+- `internal/infra` contains concrete outbound adapters, currently PostgreSQL persistence and outbox storage
+- `internal/transport` contains inbound adapters, currently REST, gRPC, AMQP RPC, and NATS RPC
+- `pkg` contains reusable technical components, not product business rules
 
-### The main principle
+The key dependency rule is simple: inner layers do not import outer layers.
 
-Dependency Inversion (the same one from SOLID) is the principle of dependency injection.
-The direction of dependencies goes from the outer layer to the inner layer.
-Due to this, business logic and entities remain independent from other parts of the system.
+Allowed examples:
 
-So, the application is divided into 2 layers, internal and external:
-
-1. **Business logic** (Go standard library).
-2. **Tools** (databases, servers, message brokers, any other packages and frameworks).
+- transport -> usecase contract -> usecase implementation
+- usecase implementation -> usecase contract -> infra implementation
+- infra implementation -> domain conversion
 
 ![Clean Architecture](docs/img/layers-1.png)
 
-**The inner layer** with business logic should be clean. It should:
+Do not put framework types, request DTOs, persistence rows, broker clients, or database handles into `internal/domain` or use case contracts.
 
-- Not have package imports from the outer layer.
-- Use only the capabilities of the standard library.
-- Make calls to the outer layer through the interface (!).
+### Boundary Example
 
-The business logic doesn't know anything about Postgres or a specific web API.
-Business logic has an interface for working with an _abstract_ database or _abstract_ web API.
-
-**The outer layer** has other limitations:
-
-- All components of this layer are unaware of each other's existence. How to call another from one tool? Not directly,
-  only through the inner layer of business logic.
-- All calls to the inner layer are made through the interface (!).
-- Business data crosses the use case boundary as `internal/domain`; transport adapters and persistence implementations convert their own request/response or row models at the edge.
-
-For example, you need to access the database from HTTP transport.
-Both HTTP and database are in the outer layer, which means they know nothing about each other.
-The communication between them is carried out through `usecase` (business logic):
+For an HTTP request that needs database data, the flow is:
 
 ```
     HTTP > usecase
@@ -579,12 +455,11 @@ The communication between them is carried out through `usecase` (business logic)
     HTTP < usecase
 ```
 
-The symbols > and < show the intersection of layer boundaries through Interfaces.
-The same is shown in the picture:
+The symbols > and < show layer boundaries crossed through interfaces.
 
 ![Example](docs/img/example-http-db.png)
 
-Or more complex business logic:
+For a workflow that also publishes events, the flow should remain explicit:
 
 ```
     HTTP > usecase
@@ -599,21 +474,19 @@ Or more complex business logic:
     HTTP < usecase
 ```
 
-### Layers
-
 ![Example](docs/img/layers-2.png)
 
-### Clean Architecture Terminology
+### Domain, DTO, and Persistence Rows
 
-- **Entities** are structures that business logic operates on.
-  They are located in the `internal/domain` folder.
-  In MVC terms, entities are models.
-- **Use Cases** is business logic located in `internal/usecase`.
+Domain values are the language of business code. Transports and persistence adapters convert at the edge:
 
-The layer with which business logic directly interacts is usually called the _infrastructure_ layer.
-These can be persistence implementations in `internal/infra/persistence`, technical clients in `pkg`, and other
-integration adapters.
-In the template, the _infrastructure_ packages are located inside `internal/infra`.
+- REST request/response structs stay under `internal/transport/restapi/v1/request` and `response`
+- AMQP/NATS request/response structs stay under their transport trees
+- gRPC protobuf messages stay under `docs/proto/v1`
+- sqlc rows stay under `internal/infra/persistence/sqlc`
+- conversion between rows and domain values is owned by the repository implementation
+
+### Transactions and Persistence
 
 For cross-repository writes, the persistence layer exposes a small transaction template instead of requiring an ORM:
 
@@ -623,6 +496,8 @@ For cross-repository writes, the persistence layer exposes a small transaction t
 - Demo repository SQL lives in `internal/infra/persistence/sql/*.sql` and is generated with `sqlc` into `internal/infra/persistence/sqlc`.
 
 This is intentionally a template extension point. Simple single-repository demo use cases can call repositories directly; flows that need atomic multi-table updates should opt into `WithinTx` without leaking `pgx.Tx` into `internal/usecase`. The task sample uses this boundary when writing the task and its notification. `sqlc` removes hand-written scan boilerplate while the repository still owns domain conversion and stable error mapping.
+
+### Errors
 
 REST errors use a stable envelope:
 
@@ -638,6 +513,8 @@ REST errors use a stable envelope:
 
 The mapping is centralized in `internal/apperror`, following the same idea as Kratos' `code`/`reason` split: transport status codes remain protocol-level, while the string `code` is the stable client-facing reason. REST responses expose it as `error.code`; gRPC responses attach it as `google.rpc.ErrorInfo.reason`; AMQP RPC and NATS RPC use it as the RPC status code. Demo domain errors live next to their sample model files; REST, gRPC, AMQP, and NATS error mapping plus expected-error log classification are handled in `apperror` to avoid duplicated transport helper packages.
 
+### Outbox
+
 For event publishing, the scaffold includes a production-shaped transactional outbox example:
 
 - migration-backed `outbox_events` table
@@ -647,38 +524,6 @@ For event publishing, the scaffold includes a production-shaped transactional ou
 
 It is disabled by default through `OUTBOX_ENABLED=false`. When enabled with `OUTBOX_PUBLISHER=nats`, the relay publishes events to `OUTBOX_SUBJECT_PREFIX + "." + event_type`. Business use cases should write outbox rows through the `OutboxStore` port exposed by the transaction `RepoProvider`, inside the same `WithinTx` callback as their database changes, when they need DB + outbox consistency. Core NATS publish + flush confirms the client handed the message to the server connection; it is not a durable broker acknowledgment. Swap the publisher to JetStream, Kafka, RabbitMQ confirms, or another durable mechanism when the business event must survive broker-side failure.
 
-You can choose how to call the entry points as you wish. The options are:
-
-- transport
-- controller
-- delivery
-- gateways
-- entrypoints
-- primary
-- input
-
-### Additional layers
-
-The classic version
-of [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html) was designed for
-building large monolithic applications and has 4 layers.
-
-In the original version, the outer layer is divided into two more, which also have an inversion of dependencies
-to each other (directed inward) and communicate through interfaces.
-
-The inner layer is also divided into two (with separation of interfaces), in the case of complex logic.
-
----
-
-Complex tools can be divided into additional layers.
-However, you should add layers only if really necessary.
-
-### Alternative approaches
-
-In addition to Clean architecture, _Onion architecture_ and _Hexagonal_ (_Ports and adapters_) are similar to it.
-Both are based on the principle of Dependency Inversion.
-_Ports and adapters_ are very close to _Clean Architecture_, the differences are mainly in terminology.
-
 ## Similar projects
 
 - [https://github.com/bxcodec/go-clean-arch](https://github.com/bxcodec/go-clean-arch)
@@ -687,4 +532,4 @@ _Ports and adapters_ are very close to _Clean Architecture_, the differences are
 ## Useful links
 
 - [The Clean Architecture article](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
-- [Twelve factors](https://12factor.net/ru/)
+- [Twelve factors](https://12factor.net/)
