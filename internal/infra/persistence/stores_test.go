@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	sq "github.com/Masterminds/squirrel"
 	"github.com/bhcoder23/gin-clean-template/pkg/postgres"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -18,7 +17,7 @@ func (fakeExecutor) Exec(context.Context, string, ...any) (pgconn.CommandTag, er
 }
 
 func (fakeExecutor) Query(context.Context, string, ...any) (pgx.Rows, error) {
-	return &fakeRows{}, nil
+	return nil, nil
 }
 
 func (fakeExecutor) QueryRow(context.Context, string, ...any) pgx.Row {
@@ -36,8 +35,7 @@ var _ postgres.Executor = fakeExecutor{}
 func TestRepositoriesCreateRepositoriesBoundToExecutor(t *testing.T) {
 	t.Parallel()
 
-	builder := sq.StatementBuilder.PlaceholderFormat(sq.Dollar)
-	repos := NewRepositoriesWithExecutor(builder, fakeExecutor{})
+	repos := NewRepositoriesWithExecutor(fakeExecutor{})
 
 	require.NotNil(t, repos.Users())
 	require.NotNil(t, repos.Tasks())

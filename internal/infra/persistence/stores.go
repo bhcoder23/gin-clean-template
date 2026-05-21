@@ -3,7 +3,6 @@ package persistence
 import (
 	"context"
 
-	sq "github.com/Masterminds/squirrel"
 	"github.com/bhcoder23/gin-clean-template/internal/infra/outbox"
 	appports "github.com/bhcoder23/gin-clean-template/internal/usecase"
 	"github.com/bhcoder23/gin-clean-template/pkg/postgres"
@@ -11,36 +10,34 @@ import (
 
 // Repositories exposes repositories bound to the same executor.
 type Repositories struct {
-	builder  sq.StatementBuilderType
 	executor postgres.Executor
 }
 
 // NewRepositories creates repositories backed by the normal database pool.
 func NewRepositories(pg *postgres.Postgres) Repositories {
-	return NewRepositoriesWithExecutor(pg.Builder, pg.Pool)
+	return NewRepositoriesWithExecutor(pg.Pool)
 }
 
 // NewRepositoriesWithExecutor creates repositories backed by a pool or transaction executor.
-func NewRepositoriesWithExecutor(builder sq.StatementBuilderType, executor postgres.Executor) Repositories {
+func NewRepositoriesWithExecutor(executor postgres.Executor) Repositories {
 	return Repositories{
-		builder:  builder,
 		executor: executor,
 	}
 }
 
 // Users returns a user repository.
 func (r Repositories) Users() appports.UserRepo {
-	return NewUserRepoWithExecutor(r.builder, r.executor)
+	return NewUserRepoWithExecutor(r.executor)
 }
 
 // Tasks returns a task repository.
 func (r Repositories) Tasks() appports.TaskRepo {
-	return NewTaskRepoWithExecutor(r.builder, r.executor)
+	return NewTaskRepoWithExecutor(r.executor)
 }
 
 // Notifications returns a notification repository.
 func (r Repositories) Notifications() appports.NotificationRepo {
-	return NewNotificationRepoWithExecutor(r.builder, r.executor)
+	return NewNotificationRepoWithExecutor(r.executor)
 }
 
 // Outbox returns an outbox repository.
@@ -61,6 +58,6 @@ func NewTransactor(pg *postgres.Postgres) *Transactor {
 // WithinTx runs fn with repositories bound to one transaction.
 func (t *Transactor) WithinTx(ctx context.Context, fn func(context.Context, appports.RepoProvider) error) error {
 	return t.pg.WithinTx(ctx, func(txCtx context.Context, executor postgres.Executor) error {
-		return fn(txCtx, NewRepositoriesWithExecutor(t.pg.Builder, executor))
+		return fn(txCtx, NewRepositoriesWithExecutor(executor))
 	})
 }

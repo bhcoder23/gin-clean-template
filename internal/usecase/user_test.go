@@ -17,7 +17,7 @@ import (
 
 var errUseCaseInternal = errors.New("internal server error")
 
-func newUserUseCase(t *testing.T) (*user.UserUsecase, *MockUserRepo) {
+func newUserUseCase(t *testing.T) (*user.Usecase, *MockUserRepo) {
 	t.Helper()
 
 	ctrl := gomock.NewController(t)

@@ -17,22 +17,22 @@ import (
 
 const minPasswordLength = 6
 
-// UserUsecase coordinates user application workflows.
-type UserUsecase struct {
+// Usecase coordinates user application workflows.
+type Usecase struct {
 	repo appports.UserRepo
 	jwt  *jwt.Manager
 }
 
 // New -.
-func New(r appports.UserRepo, j *jwt.Manager) *UserUsecase {
-	return &UserUsecase{
+func New(r appports.UserRepo, j *jwt.Manager) *Usecase {
+	return &Usecase{
 		repo: r,
 		jwt:  j,
 	}
 }
 
 // Register -.
-func (uc *UserUsecase) Register(ctx context.Context, username, email, password string) (domain.User, error) {
+func (uc *Usecase) Register(ctx context.Context, username, email, password string) (domain.User, error) {
 	username = strings.TrimSpace(username)
 	email = strings.TrimSpace(email)
 
@@ -51,7 +51,7 @@ func (uc *UserUsecase) Register(ctx context.Context, username, email, password s
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return domain.User{}, fmt.Errorf("UserUsecase - Register - bcrypt.GenerateFromPassword: %w", err)
+		return domain.User{}, fmt.Errorf("user.Usecase - Register - bcrypt.GenerateFromPassword: %w", err)
 	}
 
 	now := time.Now().UTC()
@@ -67,21 +67,21 @@ func (uc *UserUsecase) Register(ctx context.Context, username, email, password s
 
 	err = uc.repo.Store(ctx, &user)
 	if err != nil {
-		return domain.User{}, fmt.Errorf("UserUsecase - Register - uc.repo.Store: %w", err)
+		return domain.User{}, fmt.Errorf("user.Usecase - Register - uc.repo.Store: %w", err)
 	}
 
 	return user, nil
 }
 
 // Login -.
-func (uc *UserUsecase) Login(ctx context.Context, email, password string) (string, error) {
+func (uc *Usecase) Login(ctx context.Context, email, password string) (string, error) {
 	user, err := uc.repo.GetByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {
 			return "", domain.ErrInvalidCredentials
 		}
 
-		return "", fmt.Errorf("UserUsecase - Login - uc.repo.GetByEmail: %w", err)
+		return "", fmt.Errorf("user.Usecase - Login - uc.repo.GetByEmail: %w", err)
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
@@ -91,17 +91,17 @@ func (uc *UserUsecase) Login(ctx context.Context, email, password string) (strin
 
 	token, err := uc.jwt.GenerateToken(user.ID)
 	if err != nil {
-		return "", fmt.Errorf("UserUsecase - Login - uc.jwt.GenerateToken: %w", err)
+		return "", fmt.Errorf("user.Usecase - Login - uc.jwt.GenerateToken: %w", err)
 	}
 
 	return token, nil
 }
 
 // GetUser -.
-func (uc *UserUsecase) GetUser(ctx context.Context, userID string) (domain.User, error) {
+func (uc *Usecase) GetUser(ctx context.Context, userID string) (domain.User, error) {
 	user, err := uc.repo.GetByID(ctx, userID)
 	if err != nil {
-		return domain.User{}, fmt.Errorf("UserUsecase - GetUser - uc.repo.GetByID: %w", err)
+		return domain.User{}, fmt.Errorf("user.Usecase - GetUser - uc.repo.GetByID: %w", err)
 	}
 
 	return user, nil

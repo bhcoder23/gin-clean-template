@@ -46,7 +46,7 @@ func (r *V1) createTask(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, response.NewTaskResp(task))
+	ctx.JSON(http.StatusCreated, response.NewTaskResp(&task))
 }
 
 // @Summary     List tasks
@@ -138,7 +138,7 @@ func (r *V1) getTask(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewTaskResp(task))
+	ctx.JSON(http.StatusOK, response.NewTaskResp(&task))
 }
 
 // @Summary     Update task
@@ -178,7 +178,7 @@ func (r *V1) updateTask(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewTaskResp(task))
+	ctx.JSON(http.StatusOK, response.NewTaskResp(&task))
 }
 
 // @Summary     Transition task status
@@ -218,7 +218,7 @@ func (r *V1) transitionTask(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewTaskResp(task))
+	ctx.JSON(http.StatusOK, response.NewTaskResp(&task))
 }
 
 // @Summary     Delete task

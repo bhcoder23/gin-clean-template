@@ -14,7 +14,7 @@ type UserResp struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-func NewUserResp(user domain.User) UserResp {
+func NewUserResp(user *domain.User) UserResp {
 	return UserResp{
 		ID:        user.ID,
 		Username:  user.Username,

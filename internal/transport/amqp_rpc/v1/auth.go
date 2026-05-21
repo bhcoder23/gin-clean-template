@@ -23,3 +23,29 @@ func extractUserID(d *amqp.Delivery, jwtManager *jwt.Manager) (userID string, da
 
 	return userID, req.Data, nil
 }
+
+func (r *V1) bindAuthenticatedRequest(d *amqp.Delivery, target any) (string, error) {
+	userID, data, err := extractUserID(d, r.j)
+	if err != nil {
+		return "", err
+	}
+
+	if err := r.decodeAndValidate(data, target); err != nil {
+		return "", err
+	}
+
+	return userID, nil
+}
+
+func (r *V1) bindOptionalAuthenticatedRequest(d *amqp.Delivery, target any) (string, error) {
+	userID, data, err := extractUserID(d, r.j)
+	if err != nil {
+		return "", err
+	}
+
+	if err := r.decodeOptionalAndValidate(data, target); err != nil {
+		return "", err
+	}
+
+	return userID, nil
+}

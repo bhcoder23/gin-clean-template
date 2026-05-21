@@ -21,7 +21,7 @@ type ListTasksResp struct {
 	Total int        `json:"total"`
 }
 
-func NewTaskResp(task domain.Task) TaskResp {
+func NewTaskResp(task *domain.Task) TaskResp {
 	return TaskResp{
 		ID:          task.ID,
 		UserID:      task.UserID,
@@ -35,8 +35,8 @@ func NewTaskResp(task domain.Task) TaskResp {
 
 func NewListTasksResp(tasks []domain.Task, total int) ListTasksResp {
 	items := make([]TaskResp, 0, len(tasks))
-	for _, task := range tasks {
-		items = append(items, NewTaskResp(task))
+	for i := range tasks {
+		items = append(items, NewTaskResp(&tasks[i]))
 	}
 
 	return ListTasksResp{Tasks: items, Total: total}

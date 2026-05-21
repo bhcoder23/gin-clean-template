@@ -11,21 +11,21 @@ import (
 	"github.com/google/uuid"
 )
 
-// TaskUsecase coordinates task application workflows.
-type TaskUsecase struct {
+// Usecase coordinates task application workflows.
+type Usecase struct {
 	repo             appports.TaskRepo
 	notificationRepo appports.NotificationRepo
 	transactor       appports.Transactor
 }
 
 // New -.
-func New(r appports.TaskRepo, notificationRepo appports.NotificationRepo, transactors ...appports.Transactor) *TaskUsecase {
+func New(r appports.TaskRepo, notificationRepo appports.NotificationRepo, transactors ...appports.Transactor) *Usecase {
 	var transactor appports.Transactor
 	if len(transactors) > 0 {
 		transactor = transactors[0]
 	}
 
-	return &TaskUsecase{
+	return &Usecase{
 		repo:             r,
 		notificationRepo: notificationRepo,
 		transactor:       transactor,
@@ -33,7 +33,7 @@ func New(r appports.TaskRepo, notificationRepo appports.NotificationRepo, transa
 }
 
 // Create -.
-func (uc *TaskUsecase) Create(ctx context.Context, userID, title, description string) (domain.Task, error) {
+func (uc *Usecase) Create(ctx context.Context, userID, title, description string) (domain.Task, error) {
 	now := time.Now().UTC()
 	title = strings.TrimSpace(title)
 	description = strings.TrimSpace(description)
@@ -54,7 +54,7 @@ func (uc *TaskUsecase) Create(ctx context.Context, userID, title, description st
 
 	err := uc.withRepos(ctx, func(txCtx context.Context, taskRepo appports.TaskRepo, notificationRepo appports.NotificationRepo) error {
 		if err := taskRepo.Store(txCtx, &task); err != nil {
-			return fmt.Errorf("TaskUsecase - Create - taskRepo.Store: %w", err)
+			return fmt.Errorf("task.Usecase - Create - taskRepo.Store: %w", err)
 		}
 
 		if err := uc.storeNotification(txCtx, notificationRepo, &domain.Notification{
@@ -78,17 +78,17 @@ func (uc *TaskUsecase) Create(ctx context.Context, userID, title, description st
 }
 
 // Get -.
-func (uc *TaskUsecase) Get(ctx context.Context, userID, taskID string) (domain.Task, error) {
+func (uc *Usecase) Get(ctx context.Context, userID, taskID string) (domain.Task, error) {
 	task, err := uc.repo.GetByID(ctx, userID, taskID)
 	if err != nil {
-		return domain.Task{}, fmt.Errorf("TaskUsecase - Get - uc.repo.GetByID: %w", err)
+		return domain.Task{}, fmt.Errorf("task.Usecase - Get - uc.repo.GetByID: %w", err)
 	}
 
 	return task, nil
 }
 
 // List -.
-func (uc *TaskUsecase) List(ctx context.Context, userID string, status *domain.TaskStatus, query string, limit, offset int) ([]domain.Task, int, error) {
+func (uc *Usecase) List(ctx context.Context, userID string, status *domain.TaskStatus, query string, limit, offset int) ([]domain.Task, int, error) {
 	if limit <= 0 {
 		limit = 10
 	}
@@ -104,14 +104,14 @@ func (uc *TaskUsecase) List(ctx context.Context, userID string, status *domain.T
 		Offset: uint64(offset),
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("TaskUsecase - List - uc.repo.List: %w", err)
+		return nil, 0, fmt.Errorf("task.Usecase - List - uc.repo.List: %w", err)
 	}
 
 	return tasks, total, nil
 }
 
 // Update -.
-func (uc *TaskUsecase) Update(ctx context.Context, userID, taskID, title, description string) (domain.Task, error) {
+func (uc *Usecase) Update(ctx context.Context, userID, taskID, title, description string) (domain.Task, error) {
 	now := time.Now().UTC()
 	title = strings.TrimSpace(title)
 	description = strings.TrimSpace(description)
@@ -122,7 +122,7 @@ func (uc *TaskUsecase) Update(ctx context.Context, userID, taskID, title, descri
 
 	task, err := uc.repo.GetByID(ctx, userID, taskID)
 	if err != nil {
-		return domain.Task{}, fmt.Errorf("TaskUsecase - Update - uc.repo.GetByID: %w", err)
+		return domain.Task{}, fmt.Errorf("task.Usecase - Update - uc.repo.GetByID: %w", err)
 	}
 
 	if task.Status == domain.TaskStatusDone {
@@ -135,14 +135,14 @@ func (uc *TaskUsecase) Update(ctx context.Context, userID, taskID, title, descri
 
 	err = uc.repo.Update(ctx, &task)
 	if err != nil {
-		return domain.Task{}, fmt.Errorf("TaskUsecase - Update - uc.repo.Update: %w", err)
+		return domain.Task{}, fmt.Errorf("task.Usecase - Update - uc.repo.Update: %w", err)
 	}
 
 	return task, nil
 }
 
 // Transition -.
-func (uc *TaskUsecase) Transition(ctx context.Context, userID, taskID string, newStatus domain.TaskStatus) (domain.Task, error) {
+func (uc *Usecase) Transition(ctx context.Context, userID, taskID string, newStatus domain.TaskStatus) (domain.Task, error) {
 	now := time.Now().UTC()
 
 	var task domain.Task
@@ -152,7 +152,7 @@ func (uc *TaskUsecase) Transition(ctx context.Context, userID, taskID string, ne
 
 		task, err = taskRepo.GetByID(txCtx, userID, taskID)
 		if err != nil {
-			return fmt.Errorf("TaskUsecase - Transition - taskRepo.GetByID: %w", err)
+			return fmt.Errorf("task.Usecase - Transition - taskRepo.GetByID: %w", err)
 		}
 
 		err = task.Transition(newStatus)
@@ -164,7 +164,7 @@ func (uc *TaskUsecase) Transition(ctx context.Context, userID, taskID string, ne
 
 		err = taskRepo.Update(txCtx, &task)
 		if err != nil {
-			return fmt.Errorf("TaskUsecase - Transition - taskRepo.Update: %w", err)
+			return fmt.Errorf("task.Usecase - Transition - taskRepo.Update: %w", err)
 		}
 
 		if err := uc.storeNotification(txCtx, notificationRepo, &domain.Notification{
@@ -188,10 +188,10 @@ func (uc *TaskUsecase) Transition(ctx context.Context, userID, taskID string, ne
 }
 
 // Delete -.
-func (uc *TaskUsecase) Delete(ctx context.Context, userID, taskID string) error {
+func (uc *Usecase) Delete(ctx context.Context, userID, taskID string) error {
 	task, err := uc.repo.GetByID(ctx, userID, taskID)
 	if err != nil {
-		return fmt.Errorf("TaskUsecase - Delete - uc.repo.GetByID: %w", err)
+		return fmt.Errorf("task.Usecase - Delete - uc.repo.GetByID: %w", err)
 	}
 
 	if task.Status == domain.TaskStatusDone {
@@ -200,13 +200,13 @@ func (uc *TaskUsecase) Delete(ctx context.Context, userID, taskID string) error 
 
 	err = uc.repo.Delete(ctx, userID, taskID)
 	if err != nil {
-		return fmt.Errorf("TaskUsecase - Delete - uc.repo.Delete: %w", err)
+		return fmt.Errorf("task.Usecase - Delete - uc.repo.Delete: %w", err)
 	}
 
 	return nil
 }
 
-func (uc *TaskUsecase) withRepos(
+func (uc *Usecase) withRepos(
 	ctx context.Context,
 	fn func(context.Context, appports.TaskRepo, appports.NotificationRepo) error,
 ) error {
@@ -219,12 +219,12 @@ func (uc *TaskUsecase) withRepos(
 	})
 }
 
-func (uc *TaskUsecase) storeNotification(ctx context.Context, notificationRepo appports.NotificationRepo, notification *domain.Notification) error {
+func (uc *Usecase) storeNotification(ctx context.Context, notificationRepo appports.NotificationRepo, notification *domain.Notification) error {
 	notification.ID = uuid.New().String()
 	notification.CreatedAt = time.Now().UTC()
 
 	if err := notificationRepo.Store(ctx, notification); err != nil {
-		return fmt.Errorf("TaskUsecase - storeNotification - notificationRepo.Store: %w", err)
+		return fmt.Errorf("task.Usecase - storeNotification - notificationRepo.Store: %w", err)
 	}
 
 	return nil

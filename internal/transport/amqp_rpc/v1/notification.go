@@ -12,13 +12,10 @@ import (
 
 func (r *V1) listNotifications() server.CallHandler {
 	return func(ctx context.Context, d *amqp.Delivery) (any, error) {
-		userID, data, err := extractUserID(d, r.j)
-		if err != nil {
-			return nil, err
-		}
-
 		var req request.ListNotificationsReq
-		if err = r.decodeOptionalAndValidate(data, &req); err != nil {
+
+		userID, err := r.bindOptionalAuthenticatedRequest(d, &req)
+		if err != nil {
 			return nil, err
 		}
 
@@ -38,15 +35,13 @@ func (r *V1) listNotifications() server.CallHandler {
 	}
 }
 
+//nolint:dupl // RPC handlers stay explicit per route; shared binding/error mapping is already factored.
 func (r *V1) markNotificationRead() server.CallHandler {
 	return func(ctx context.Context, d *amqp.Delivery) (any, error) {
-		userID, data, err := extractUserID(d, r.j)
-		if err != nil {
-			return nil, err
-		}
-
 		var req request.MarkNotificationReadReq
-		if err = r.decodeAndValidate(data, &req); err != nil {
+
+		userID, err := r.bindAuthenticatedRequest(d, &req)
+		if err != nil {
 			return nil, err
 		}
 
@@ -57,6 +52,6 @@ func (r *V1) markNotificationRead() server.CallHandler {
 			return nil, apperror.RPC(err)
 		}
 
-		return response.NewNotificationResp(notification), nil
+		return response.NewNotificationResp(&notification), nil
 	}
 }

@@ -25,7 +25,7 @@ func (r *V1) register() server.CallHandler {
 			return nil, apperror.RPC(err)
 		}
 
-		return response.NewUserResp(user), nil
+		return response.NewUserResp(&user), nil
 	}
 }
 

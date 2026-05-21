@@ -18,64 +18,61 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestBindJSONRejectsInvalidRequest(t *testing.T) {
+func TestBindJSONRejectsBadRequests(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	t.Parallel()
 
-	recorder := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(recorder)
-	req := httptest.NewRequestWithContext(
-		requestid.WithContext(context.Background(), "req-bind"),
-		http.MethodPost,
-		"/",
-		strings.NewReader(`{`),
-	)
-	req.Header.Set("Content-Type", "application/json")
-	ctx.Request = req
-
-	r := &V1{
-		l: logger.New("error"),
-		v: validator.New(validator.WithRequiredStructEnabled()),
+	tests := []struct {
+		name      string
+		body      string
+		requestID string
+		logLabel  string
+	}{
+		{
+			name:      "invalid json",
+			body:      `{`,
+			requestID: "req-bind",
+			logLabel:  "test - bind",
+		},
+		{
+			name:      "validation error",
+			body:      `{"username":"ab","email":"invalid","password":"123"}`,
+			requestID: "req-validate",
+			logLabel:  "test - validate",
+		},
 	}
 
-	var body request.RegisterReq
-	ok := r.bindJSON(ctx, &body, "test - bind")
-	require.False(t, ok)
-	require.Equal(t, http.StatusBadRequest, recorder.Code)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-	var got response.Error
-	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &got))
-	require.Equal(t, apperror.CodeInvalidRequest, got.Error.Code)
-	require.Equal(t, "invalid request body", got.Error.Message)
-	require.Equal(t, "req-bind", got.Error.RequestID)
-}
+			recorder := httptest.NewRecorder()
+			ctx, _ := gin.CreateTestContext(recorder)
+			req := httptest.NewRequestWithContext(
+				requestid.WithContext(context.Background(), tt.requestID),
+				http.MethodPost,
+				"/",
+				strings.NewReader(tt.body),
+			)
+			req.Header.Set("Content-Type", "application/json")
+			ctx.Request = req
 
-func TestBindJSONRejectsValidationError(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+			r := &V1{
+				l: logger.New("error"),
+				v: validator.New(validator.WithRequiredStructEnabled()),
+			}
 
-	recorder := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(recorder)
-	req := httptest.NewRequestWithContext(
-		requestid.WithContext(context.Background(), "req-validate"),
-		http.MethodPost,
-		"/",
-		strings.NewReader(`{"username":"ab","email":"invalid","password":"123"}`),
-	)
-	req.Header.Set("Content-Type", "application/json")
-	ctx.Request = req
+			var body request.RegisterReq
 
-	r := &V1{
-		l: logger.New("error"),
-		v: validator.New(validator.WithRequiredStructEnabled()),
+			ok := r.bindJSON(ctx, &body, tt.logLabel)
+			require.False(t, ok)
+			require.Equal(t, http.StatusBadRequest, recorder.Code)
+
+			var got response.Error
+			require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &got))
+			require.Equal(t, apperror.CodeInvalidRequest, got.Error.Code)
+			require.Equal(t, "invalid request body", got.Error.Message)
+			require.Equal(t, tt.requestID, got.Error.RequestID)
+		})
 	}
-
-	var body request.RegisterReq
-	ok := r.bindJSON(ctx, &body, "test - validate")
-	require.False(t, ok)
-	require.Equal(t, http.StatusBadRequest, recorder.Code)
-
-	var got response.Error
-	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &got))
-	require.Equal(t, apperror.CodeInvalidRequest, got.Error.Code)
-	require.Equal(t, "invalid request body", got.Error.Message)
-	require.Equal(t, "req-validate", got.Error.RequestID)
 }

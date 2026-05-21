@@ -105,6 +105,7 @@ func GRPCWithMessage(err error, message string) error {
 
 func grpcError(appErr Error, message string) error {
 	st := status.New(appErr.GRPCCode, message)
+
 	st, err := st.WithDetails(&errdetails.ErrorInfo{Reason: appErr.Code})
 	if err != nil {
 		return status.Error(appErr.GRPCCode, message)

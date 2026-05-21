@@ -8,7 +8,6 @@ import (
 	"math"
 	"time"
 
-	"github.com/Masterminds/squirrel"
 	"github.com/bhcoder23/gin-clean-template/pkg/logger"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -30,8 +29,7 @@ type Postgres struct {
 	connTimeout  time.Duration
 	logger       logger.Interface
 
-	Builder squirrel.StatementBuilderType
-	Pool    *pgxpool.Pool
+	Pool *pgxpool.Pool
 }
 
 // Executor is the minimal query contract shared by pgxpool.Pool and pgx.Tx.
@@ -53,8 +51,6 @@ func New(url string, opts ...Option) (*Postgres, error) {
 	for _, opt := range opts {
 		opt(pg)
 	}
-
-	pg.Builder = squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar)
 
 	poolConfig, err := pgxpool.ParseConfig(url)
 	if err != nil {

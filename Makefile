@@ -13,6 +13,7 @@ export GOTOOLCHAIN
 BASE_STACK = docker compose -f docker-compose.yml
 INTEGRATION_TEST_STACK = $(BASE_STACK) -f docker-compose-integration-test.yml
 ALL_STACK = $(INTEGRATION_TEST_STACK)
+SQLC = go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.30.0
 
 # HELP =================================================================================================================
 # This will output the help for each task
@@ -39,7 +40,7 @@ compose-down: ### Down docker compose
 	$(ALL_STACK) down --remove-orphans
 .PHONY: compose-down
 
-generate: ### regenerate Swagger and protobuf artifacts
+generate: sqlc ### regenerate sqlc, Swagger, and protobuf artifacts
 	go tool swag init --parseDependency -g internal/transport/restapi/router.go
 	protoc --go_out=. \
 		--go_opt=paths=source_relative \
@@ -59,6 +60,10 @@ proto-v1: ### generate source files from proto
 		--go-grpc_opt=paths=source_relative \
 		docs/proto/v1/*.proto
 .PHONY: proto-v1
+
+sqlc: ### generate type-safe persistence query code
+	$(SQLC) generate
+.PHONY: sqlc
 
 deps: ### deps tidy + verify
 	go mod tidy && go mod verify
@@ -127,5 +132,5 @@ bin-deps: ### install tools
 	go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate
 .PHONY: bin-deps
 
-pre-commit: deps swag-v1 proto-v1 mock format linter-golangci test ### run pre-commit
+pre-commit: deps sqlc swag-v1 proto-v1 mock format linter-golangci test ### run pre-commit
 .PHONY: pre-commit

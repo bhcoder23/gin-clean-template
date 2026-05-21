@@ -44,7 +44,7 @@ func New(level string) *Logger {
 	zerolog.SetGlobalLevel(l)
 
 	skipFrameCount := 3
-	logger := zerolog.
+	zl := zerolog.
 		New(os.Stdout).
 		With().
 		Timestamp().
@@ -52,7 +52,7 @@ func New(level string) *Logger {
 		Logger()
 
 	return &Logger{
-		logger: new(logger),
+		logger: &zl,
 	}
 }
 

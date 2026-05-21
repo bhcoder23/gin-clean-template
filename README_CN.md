@@ -11,7 +11,7 @@
 [![API Documentation](https://img.shields.io/badge/Swagger-API%20Documentation-blue)](https://github.com/swaggo/swag)
 [![Validation](https://img.shields.io/badge/Validator-Data%20Integrity-blue)](https://github.com/go-playground/validator)
 [![JSON Handling](https://img.shields.io/badge/Go--JSON-Fast%20Serialization-blue)](https://github.com/goccy/go-json)
-[![Query Builder](https://img.shields.io/badge/Squirrel-SQL%20Query%20Builder-blue)](https://github.com/Masterminds/squirrel)
+[![Persistence](https://img.shields.io/badge/sqlc-Type--safe%20SQL-blue)](https://sqlc.dev/)
 [![Database Migrations](https://img.shields.io/badge/Migrations-Seamless%20Schema%20Updates-blue)](https://github.com/golang-migrate/migrate)
 [![Logging](https://img.shields.io/badge/ZeroLog-Structured%20Logging-blue)](https://github.com/rs/zerolog)
 [![Metrics](https://img.shields.io/badge/Prometheus-Metrics%20Integration-blue)](https://github.com/prometheus/client_golang)
@@ -596,8 +596,9 @@ HTTP 和数据库都在外层，这意味着它们彼此无法感知。
 - `persistence.NewRepositories(pg)` 创建基于普通连接池的 repository。
 - `persistence.NewTransactor(pg).WithinTx(ctx, fn)` 创建基于同一个 `pgx` 事务的 repository。
 - repository 依赖最小的 `postgres.Executor` 接口，所以同一套 repository 可以跑在连接池或事务上。
+- demo repository 的 SQL 放在 `internal/infra/persistence/sql/*.sql`，并通过 `sqlc` 生成到 `internal/infra/persistence/sqlc`。
 
-这是脚手架扩展点。简单的单 repository demo usecase 可以直接调用 repository；需要多表原子更新的流程应使用 `WithinTx`，同时不把 `pgx.Tx` 泄漏到 `internal/usecase`。task 示例在写 task 和 notification 时已经演示这个事务边界。
+这是脚手架扩展点。简单的单 repository demo usecase 可以直接调用 repository；需要多表原子更新的流程应使用 `WithinTx`，同时不把 `pgx.Tx` 泄漏到 `internal/usecase`。task 示例在写 task 和 notification 时已经演示这个事务边界。`sqlc` 用于减少手写 scan 样板，repository 仍然负责 domain 转换和稳定错误映射。
 
 REST 错误使用稳定 envelope：
 

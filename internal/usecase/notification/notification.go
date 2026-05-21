@@ -9,18 +9,18 @@ import (
 	appports "github.com/bhcoder23/gin-clean-template/internal/usecase"
 )
 
-// NotificationUsecase coordinates notification application workflows.
-type NotificationUsecase struct {
+// Usecase coordinates notification application workflows.
+type Usecase struct {
 	repo appports.NotificationRepo
 }
 
 // New -.
-func New(r appports.NotificationRepo) *NotificationUsecase {
-	return &NotificationUsecase{repo: r}
+func New(r appports.NotificationRepo) *Usecase {
+	return &Usecase{repo: r}
 }
 
 // List -.
-func (uc *NotificationUsecase) List(ctx context.Context, userID string, unreadOnly *bool, limit, offset int) ([]domain.Notification, int, error) {
+func (uc *Usecase) List(ctx context.Context, userID string, unreadOnly *bool, limit, offset int) ([]domain.Notification, int, error) {
 	if limit <= 0 {
 		limit = 10
 	}
@@ -35,17 +35,17 @@ func (uc *NotificationUsecase) List(ctx context.Context, userID string, unreadOn
 		Offset:     uint64(offset),
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("NotificationUsecase - List - uc.repo.List: %w", err)
+		return nil, 0, fmt.Errorf("notification.Usecase - List - uc.repo.List: %w", err)
 	}
 
 	return notifications, total, nil
 }
 
 // MarkRead -.
-func (uc *NotificationUsecase) MarkRead(ctx context.Context, userID, notificationID string) (domain.Notification, error) {
+func (uc *Usecase) MarkRead(ctx context.Context, userID, notificationID string) (domain.Notification, error) {
 	notification, err := uc.repo.GetByID(ctx, userID, notificationID)
 	if err != nil {
-		return domain.Notification{}, fmt.Errorf("NotificationUsecase - MarkRead - uc.repo.GetByID: %w", err)
+		return domain.Notification{}, fmt.Errorf("notification.Usecase - MarkRead - uc.repo.GetByID: %w", err)
 	}
 
 	if notification.Read {
@@ -57,7 +57,7 @@ func (uc *NotificationUsecase) MarkRead(ctx context.Context, userID, notificatio
 	notification.ReadAt = &now
 
 	if err = uc.repo.Update(ctx, &notification); err != nil {
-		return domain.Notification{}, fmt.Errorf("NotificationUsecase - MarkRead - uc.repo.Update: %w", err)
+		return domain.Notification{}, fmt.Errorf("notification.Usecase - MarkRead - uc.repo.Update: %w", err)
 	}
 
 	return notification, nil

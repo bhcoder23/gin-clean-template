@@ -15,7 +15,7 @@ import (
 
 var errRepoGeneric = errors.New("repository error")
 
-func newTaskUseCase(t *testing.T) (*task.TaskUsecase, *MockTaskRepo, *MockNotificationRepo) {
+func newTaskUseCase(t *testing.T) (*task.Usecase, *MockTaskRepo, *MockNotificationRepo) {
 	t.Helper()
 
 	ctrl := gomock.NewController(t)

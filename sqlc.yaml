@@ -1,0 +1,28 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    schema:
+      - "migrations/20260403000001_create_users.up.sql"
+      - "migrations/20260403000002_create_tasks.up.sql"
+      - "migrations/20260518000004_replace_history_with_notifications.up.sql"
+    queries: "internal/infra/persistence/sql"
+    gen:
+      go:
+        package: "sqlc"
+        out: "internal/infra/persistence/sqlc"
+        sql_package: "pgx/v5"
+        emit_empty_slices: true
+        overrides:
+          - db_type: "uuid"
+            go_type: "string"
+          - db_type: "pg_catalog.timestamp"
+            nullable: false
+            go_type:
+              import: "time"
+              type: "Time"
+          - db_type: "pg_catalog.timestamp"
+            nullable: true
+            go_type:
+              import: "time"
+              type: "Time"
+              pointer: true

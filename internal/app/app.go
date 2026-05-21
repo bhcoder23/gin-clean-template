@@ -32,9 +32,9 @@ import (
 )
 
 type useCases struct {
-	notification *notification.NotificationUsecase
-	user         *user.UserUsecase
-	task         *task.TaskUsecase
+	notification *notification.Usecase
+	user         *user.Usecase
+	task         *task.Usecase
 }
 
 type servers struct {
@@ -89,71 +89,87 @@ func initServers(cfg *config.Config, uc useCases, jwtManager *jwt.Manager, pg *p
 	var s servers
 
 	if enabled.rmq {
-		rmqRouter := amqprpc.NewRouter(amqprpc.RouterDeps{
-			Notification: uc.notification,
-			User:         uc.user,
-			Task:         uc.task,
-			JWTManager:   jwtManager,
-			Logger:       l,
-		})
-
-		rmqServer, err := rmqRPCServer.New(cfg.RMQ.URL, cfg.RMQ.ServerExchange, rmqRouter, l)
-		if err != nil {
-			l.Fatal(fmt.Errorf("app - Run - rmqServer - server.New: %w", err))
-		}
-
-		s.rmq = rmqServer
+		s.rmq = initRMQServer(cfg, uc, jwtManager, l)
 	}
 
 	if enabled.nats {
-		natsRouter := natsrpc.NewRouter(natsrpc.RouterDeps{
-			Notification: uc.notification,
-			User:         uc.user,
-			Task:         uc.task,
-			JWTManager:   jwtManager,
-			Logger:       l,
-		})
-
-		natsServer, err := natsRPCServer.New(cfg.NATS.URL, cfg.NATS.ServerExchange, natsRouter, l)
-		if err != nil {
-			l.Fatal(fmt.Errorf("app - Run - natsServer - server.New: %w", err))
-		}
-
-		s.nats = natsServer
+		s.nats = initNATSServer(cfg, uc, jwtManager, l)
 	}
 
 	if enabled.grpc {
-		grpcServer := grpcserver.New(l,
-			grpcserver.Port(cfg.GRPC.Port),
-			grpcserver.ServerOptions(pbgrpc.ChainUnaryInterceptor(
-				grpcmw.RequestIDInterceptor(),
-				grpcmw.AuthInterceptor(jwtManager),
-			)),
-		)
-		grpc.NewRouter(grpcServer.App, grpc.RouterDeps{
-			Notification: uc.notification,
-			User:         uc.user,
-			Task:         uc.task,
-			Logger:       l,
-		})
-
-		s.grpc = grpcServer
+		s.grpc = initGRPCServer(cfg, uc, jwtManager, l)
 	}
 
 	if enabled.http {
-		httpServer := httpserver.New(l, httpserver.GinMode(cfg.HTTP.Mode), httpserver.Port(cfg.HTTP.Port))
-		restapi.NewRouter(httpServer.App, cfg, restapi.RouterDeps{
-			Notification: uc.notification,
-			User:         uc.user,
-			Task:         uc.task,
-			JWTManager:   jwtManager,
-			Logger:       l,
-		}, restapi.ReadinessCheck(pg.Ping))
-
-		s.http = httpServer
+		s.http = initHTTPServer(cfg, uc, jwtManager, pg, l)
 	}
 
 	return s
+}
+
+func initRMQServer(cfg *config.Config, uc useCases, jwtManager *jwt.Manager, l logger.Interface) *rmqRPCServer.Server {
+	rmqRouter := amqprpc.NewRouter(amqprpc.RouterDeps{
+		Notification: uc.notification,
+		User:         uc.user,
+		Task:         uc.task,
+		JWTManager:   jwtManager,
+		Logger:       l,
+	})
+
+	rmqServer, err := rmqRPCServer.New(cfg.RMQ.URL, cfg.RMQ.ServerExchange, rmqRouter, l)
+	if err != nil {
+		l.Fatal(fmt.Errorf("app - Run - rmqServer - server.New: %w", err))
+	}
+
+	return rmqServer
+}
+
+func initNATSServer(cfg *config.Config, uc useCases, jwtManager *jwt.Manager, l logger.Interface) *natsRPCServer.Server {
+	natsRouter := natsrpc.NewRouter(natsrpc.RouterDeps{
+		Notification: uc.notification,
+		User:         uc.user,
+		Task:         uc.task,
+		JWTManager:   jwtManager,
+		Logger:       l,
+	})
+
+	natsServer, err := natsRPCServer.New(cfg.NATS.URL, cfg.NATS.ServerExchange, natsRouter, l)
+	if err != nil {
+		l.Fatal(fmt.Errorf("app - Run - natsServer - server.New: %w", err))
+	}
+
+	return natsServer
+}
+
+func initGRPCServer(cfg *config.Config, uc useCases, jwtManager *jwt.Manager, l logger.Interface) *grpcserver.Server {
+	grpcServer := grpcserver.New(l,
+		grpcserver.Port(cfg.GRPC.Port),
+		grpcserver.ServerOptions(pbgrpc.ChainUnaryInterceptor(
+			grpcmw.RequestIDInterceptor(),
+			grpcmw.AuthInterceptor(jwtManager),
+		)),
+	)
+	grpc.NewRouter(grpcServer.App, grpc.RouterDeps{
+		Notification: uc.notification,
+		User:         uc.user,
+		Task:         uc.task,
+		Logger:       l,
+	})
+
+	return grpcServer
+}
+
+func initHTTPServer(cfg *config.Config, uc useCases, jwtManager *jwt.Manager, pg *postgres.Postgres, l logger.Interface) *httpserver.Server {
+	httpServer := httpserver.New(l, httpserver.GinMode(cfg.HTTP.Mode), httpserver.Port(cfg.HTTP.Port))
+	restapi.NewRouter(httpServer.App, cfg, restapi.RouterDeps{
+		Notification: uc.notification,
+		User:         uc.user,
+		Task:         uc.task,
+		JWTManager:   jwtManager,
+		Logger:       l,
+	}, restapi.ReadinessCheck(pg.Ping))
+
+	return httpServer
 }
 
 func (s *servers) startServers() {

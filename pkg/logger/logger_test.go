@@ -1,3 +1,4 @@
+//nolint:paralleltest // These tests mutate zerolog's package-level global log level.
 package logger
 
 import (
@@ -18,14 +19,12 @@ func newBufferedLogger(level string) (*Logger, *bytes.Buffer) {
 	l := New(level)
 	buf := &bytes.Buffer{}
 	zl := zerolog.New(buf).With().Timestamp().Logger()
-	l.logger = new(zl)
+	l.logger = &zl
 
 	return l, buf
 }
 
 func TestNewSetsGlobalLevel(t *testing.T) {
-	t.Parallel()
-
 	cases := []struct {
 		in   string
 		want zerolog.Level
@@ -51,8 +50,6 @@ func TestNewSetsGlobalLevel(t *testing.T) {
 }
 
 func TestInfoAndWarn_LogMessageWithAndWithoutArgs(t *testing.T) {
-	t.Parallel()
-
 	l, buf := newBufferedLogger("info")
 
 	l.Info("hello")
@@ -76,8 +73,6 @@ func TestInfoAndWarn_LogMessageWithAndWithoutArgs(t *testing.T) {
 }
 
 func TestWarn_ErrorValueWithContext(t *testing.T) {
-	t.Parallel()
-
 	l, buf := newBufferedLogger("info")
 	l.Warn(errTest, "known request issue")
 
@@ -97,8 +92,6 @@ func TestWarn_ErrorValueWithContext(t *testing.T) {
 }
 
 func TestDebug_RespectsLevel(t *testing.T) {
-	t.Parallel()
-
 	// when level is info, debug should not emit
 	l, buf := newBufferedLogger("info")
 	l.Debug("dbg %d", 1)
@@ -122,8 +115,6 @@ func TestDebug_RespectsLevel(t *testing.T) {
 }
 
 func TestError_StringMessage(t *testing.T) {
-	t.Parallel()
-
 	l, buf := newBufferedLogger("info")
 	l.Error("boom")
 
@@ -139,8 +130,6 @@ func TestError_StringMessage(t *testing.T) {
 }
 
 func TestError_ErrorValueWithoutContext(t *testing.T) {
-	t.Parallel()
-
 	l, buf := newBufferedLogger("info")
 	l.Error(errTest)
 
@@ -160,8 +149,6 @@ func TestError_ErrorValueWithoutContext(t *testing.T) {
 }
 
 func TestError_ErrorValueWithContext(t *testing.T) {
-	t.Parallel()
-
 	l, buf := newBufferedLogger("info")
 	l.Error(errTest, "restapi - v1 - login")
 
@@ -181,8 +168,6 @@ func TestError_ErrorValueWithContext(t *testing.T) {
 }
 
 func TestError_ErrorValueWithFormattedContext(t *testing.T) {
-	t.Parallel()
-
 	l, buf := newBufferedLogger("info")
 	l.Error(errTest, "task %s failed", "task-id-123")
 
@@ -198,8 +183,6 @@ func TestError_ErrorValueWithFormattedContext(t *testing.T) {
 }
 
 func TestMsg_UnknownTypeFallsBack(t *testing.T) {
-	t.Parallel()
-
 	l, buf := newBufferedLogger("debug")
 	l.msg(zerolog.ErrorLevel, 12345)
 
@@ -215,8 +198,6 @@ func TestMsg_UnknownTypeFallsBack(t *testing.T) {
 }
 
 func TestFatal_ExitsAndLogs(t *testing.T) {
-	t.Parallel()
-
 	if os.Getenv("LOGGER_FATAL_SUBPROC") == "1" {
 		l := New("debug")
 		l.Fatal(errTest, "fatal now")

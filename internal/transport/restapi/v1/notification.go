@@ -97,5 +97,5 @@ func (r *V1) markNotificationRead(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewNotificationResp(notification))
+	ctx.JSON(http.StatusOK, response.NewNotificationResp(&notification))
 }

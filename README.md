@@ -11,7 +11,7 @@ General-purpose Clean Architecture template for Go backends, maintained by `bhco
 [![API Documentation](https://img.shields.io/badge/Swagger-API%20Documentation-blue)](https://github.com/swaggo/swag)
 [![Validation](https://img.shields.io/badge/Validator-Data%20Integrity-blue)](https://github.com/go-playground/validator)
 [![JSON Handling](https://img.shields.io/badge/Go--JSON-Fast%20Serialization-blue)](https://github.com/goccy/go-json)
-[![Query Builder](https://img.shields.io/badge/Squirrel-SQL%20Query%20Builder-blue)](https://github.com/Masterminds/squirrel)
+[![Persistence](https://img.shields.io/badge/sqlc-Type--safe%20SQL-blue)](https://sqlc.dev/)
 [![Database Migrations](https://img.shields.io/badge/Migrations-Seamless%20Schema%20Updates-blue)](https://github.com/golang-migrate/migrate)
 [![Logging](https://img.shields.io/badge/ZeroLog-Structured%20Logging-blue)](https://github.com/rs/zerolog)
 [![Metrics](https://img.shields.io/badge/Prometheus-Metrics%20Integration-blue)](https://github.com/prometheus/client_golang)
@@ -612,8 +612,9 @@ For cross-repository writes, the persistence layer exposes a small transaction t
 - `persistence.NewRepositories(pg)` creates repositories backed by the normal pool.
 - `persistence.NewTransactor(pg).WithinTx(ctx, fn)` creates repositories backed by one `pgx` transaction.
 - Repositories depend on the minimal `postgres.Executor` interface, so the same repository can run on a pool or a transaction.
+- Demo repository SQL lives in `internal/infra/persistence/sql/*.sql` and is generated with `sqlc` into `internal/infra/persistence/sqlc`.
 
-This is intentionally a template extension point. Simple single-repository demo use cases can call repositories directly; flows that need atomic multi-table updates should opt into `WithinTx` without leaking `pgx.Tx` into `internal/usecase`. The task sample uses this boundary when writing the task and its notification.
+This is intentionally a template extension point. Simple single-repository demo use cases can call repositories directly; flows that need atomic multi-table updates should opt into `WithinTx` without leaking `pgx.Tx` into `internal/usecase`. The task sample uses this boundary when writing the task and its notification. `sqlc` removes hand-written scan boilerplate while the repository still owns domain conversion and stable error mapping.
 
 REST errors use a stable envelope:
 

@@ -36,7 +36,7 @@ func (r *V1) register(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, response.NewUserResp(user))
+	ctx.JSON(http.StatusCreated, response.NewUserResp(&user))
 }
 
 // @Summary     Login
@@ -96,5 +96,5 @@ func (r *V1) profile(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.NewUserResp(user))
+	ctx.JSON(http.StatusOK, response.NewUserResp(&user))
 }

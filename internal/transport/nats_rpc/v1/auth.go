@@ -23,3 +23,29 @@ func extractUserID(msg *nats.Msg, jwtManager *jwt.Manager) (userID string, data 
 
 	return userID, req.Data, nil
 }
+
+func (r *V1) bindAuthenticatedRequest(msg *nats.Msg, target any) (string, error) {
+	userID, data, err := extractUserID(msg, r.j)
+	if err != nil {
+		return "", err
+	}
+
+	if err := r.decodeAndValidate(data, target); err != nil {
+		return "", err
+	}
+
+	return userID, nil
+}
+
+func (r *V1) bindOptionalAuthenticatedRequest(msg *nats.Msg, target any) (string, error) {
+	userID, data, err := extractUserID(msg, r.j)
+	if err != nil {
+		return "", err
+	}
+
+	if err := r.decodeOptionalAndValidate(data, target); err != nil {
+		return "", err
+	}
+
+	return userID, nil
+}

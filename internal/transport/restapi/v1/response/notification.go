@@ -25,7 +25,7 @@ type ListNotificationsResp struct {
 	Total         int                `example:"42" json:"total"`
 } // @name v1.ListNotificationsResp
 
-func NewNotificationResp(notification domain.Notification) NotificationResp {
+func NewNotificationResp(notification *domain.Notification) NotificationResp {
 	return NotificationResp{
 		ID:        notification.ID,
 		UserID:    notification.UserID,
@@ -41,8 +41,8 @@ func NewNotificationResp(notification domain.Notification) NotificationResp {
 
 func NewListNotificationsResp(notifications []domain.Notification, total int) ListNotificationsResp {
 	items := make([]NotificationResp, 0, len(notifications))
-	for _, notification := range notifications {
-		items = append(items, NewNotificationResp(notification))
+	for i := range notifications {
+		items = append(items, NewNotificationResp(&notifications[i]))
 	}
 
 	return ListNotificationsResp{

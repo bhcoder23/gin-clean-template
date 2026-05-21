@@ -13,13 +13,15 @@ func TestNewUserResp(t *testing.T) {
 
 	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 
-	resp := NewUserResp(domain.User{
+	user := domain.User{
 		ID:        "user-id-123",
 		Username:  "alice",
 		Email:     "alice@example.com",
 		CreatedAt: now,
 		UpdatedAt: now,
-	})
+	}
+
+	resp := NewUserResp(&user)
 
 	require.Equal(t, "user-id-123", resp.ID)
 	require.Equal(t, "alice", resp.Username)
@@ -33,7 +35,7 @@ func TestNewTaskResp(t *testing.T) {
 
 	now := time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC)
 
-	resp := NewTaskResp(domain.Task{
+	task := domain.Task{
 		ID:          "task-id-123",
 		UserID:      "user-id-123",
 		Title:       "Ship scaffold",
@@ -41,7 +43,9 @@ func TestNewTaskResp(t *testing.T) {
 		Status:      domain.TaskStatusTodo,
 		CreatedAt:   now,
 		UpdatedAt:   now,
-	})
+	}
+
+	resp := NewTaskResp(&task)
 
 	require.Equal(t, "task-id-123", resp.ID)
 	require.Equal(t, "user-id-123", resp.UserID)
@@ -58,7 +62,7 @@ func TestNewNotificationResp(t *testing.T) {
 	createdAt := time.Date(2026, 1, 3, 0, 0, 0, 0, time.UTC)
 	readAt := createdAt.Add(time.Hour)
 
-	resp := NewNotificationResp(domain.Notification{
+	notification := domain.Notification{
 		ID:        "notification-id-123",
 		UserID:    "user-id-123",
 		TaskID:    "task-id-123",
@@ -68,7 +72,9 @@ func TestNewNotificationResp(t *testing.T) {
 		Read:      true,
 		CreatedAt: createdAt,
 		ReadAt:    &readAt,
-	})
+	}
+
+	resp := NewNotificationResp(&notification)
 
 	require.Equal(t, "notification-id-123", resp.ID)
 	require.Equal(t, "user-id-123", resp.UserID)

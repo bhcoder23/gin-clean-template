@@ -4,10 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
-	sq "github.com/Masterminds/squirrel"
 	"github.com/bhcoder23/gin-clean-template/internal/domain"
+	"github.com/bhcoder23/gin-clean-template/internal/infra/persistence/sqlc"
 	appports "github.com/bhcoder23/gin-clean-template/internal/usecase"
 	"github.com/bhcoder23/gin-clean-template/pkg/postgres"
 	"github.com/jackc/pgx/v5"
@@ -15,94 +14,34 @@ import (
 
 // TaskRepo -.
 type TaskRepo struct {
-	builder  sq.StatementBuilderType
-	executor postgres.Executor
-}
-
-type taskRow struct {
-	id          string
-	userID      string
-	title       string
-	description string
-	status      domain.TaskStatus
-	createdAt   time.Time
-	updatedAt   time.Time
-}
-
-func newTaskRow(task domain.Task) taskRow {
-	return taskRow{
-		id:          task.ID,
-		userID:      task.UserID,
-		title:       task.Title,
-		description: task.Description,
-		status:      task.Status,
-		createdAt:   task.CreatedAt,
-		updatedAt:   task.UpdatedAt,
-	}
-}
-
-func (r taskRow) toDomain() domain.Task {
-	return domain.Task{
-		ID:          r.id,
-		UserID:      r.userID,
-		Title:       r.title,
-		Description: r.description,
-		Status:      r.status,
-		CreatedAt:   r.createdAt,
-		UpdatedAt:   r.updatedAt,
-	}
-}
-
-func collectTaskRows(rows pgx.Rows, limit uint64) ([]domain.Task, error) {
-	tasks := make([]domain.Task, 0, limit)
-
-	for rows.Next() {
-		var row taskRow
-
-		err := rows.Scan(&row.id, &row.userID, &row.title, &row.description, &row.status, &row.createdAt, &row.updatedAt)
-		if err != nil {
-			return nil, fmt.Errorf("collectTaskRows - rows.Scan: %w", err)
-		}
-
-		tasks = append(tasks, row.toDomain())
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("collectTaskRows - rows.Err: %w", err)
-	}
-
-	return tasks, nil
+	queries *sqlc.Queries
 }
 
 // NewTaskRepo -.
 func NewTaskRepo(pg *postgres.Postgres) *TaskRepo {
-	return NewTaskRepoWithExecutor(pg.Builder, pg.Pool)
+	return NewTaskRepoWithExecutor(pg.Pool)
 }
 
 // NewTaskRepoWithExecutor creates a repository bound to a pool or transaction executor.
-func NewTaskRepoWithExecutor(builder sq.StatementBuilderType, executor postgres.Executor) *TaskRepo {
+func NewTaskRepoWithExecutor(executor postgres.Executor) *TaskRepo {
 	return &TaskRepo{
-		builder:  builder,
-		executor: executor,
+		queries: sqlc.New(executor),
 	}
 }
 
 // Store -.
 func (r *TaskRepo) Store(ctx context.Context, task *domain.Task) error {
-	row := newTaskRow(*task)
-
-	sql, args, err := r.builder.
-		Insert("tasks").
-		Columns("id, user_id, title, description, status, created_at, updated_at").
-		Values(row.id, row.userID, row.title, row.description, row.status, row.createdAt, row.updatedAt).
-		ToSql()
+	err := r.queries.CreateTask(ctx, sqlc.CreateTaskParams{
+		ID:          task.ID,
+		UserID:      task.UserID,
+		Title:       task.Title,
+		Description: textParam(task.Description),
+		Status:      string(task.Status),
+		CreatedAt:   task.CreatedAt,
+		UpdatedAt:   task.UpdatedAt,
+	})
 	if err != nil {
-		return fmt.Errorf("TaskRepo - Store - r.Builder: %w", err)
-	}
-
-	_, err = r.executor.Exec(ctx, sql, args...)
-	if err != nil {
-		return fmt.Errorf("TaskRepo - Store - r.Pool.Exec: %w", err)
+		return fmt.Errorf("TaskRepo - Store - CreateTask: %w", err)
 	}
 
 	return nil
@@ -110,114 +49,60 @@ func (r *TaskRepo) Store(ctx context.Context, task *domain.Task) error {
 
 // GetByID -.
 func (r *TaskRepo) GetByID(ctx context.Context, userID, taskID string) (domain.Task, error) {
-	sql, args, err := r.builder.
-		Select("id, user_id, title, description, status, created_at, updated_at").
-		From("tasks").
-		Where(sq.Eq{"id": taskID, "user_id": userID}).
-		ToSql()
-	if err != nil {
-		return domain.Task{}, fmt.Errorf("TaskRepo - GetByID - r.Builder: %w", err)
-	}
-
-	var row taskRow
-
-	err = r.executor.QueryRow(ctx, sql, args...).
-		Scan(&row.id, &row.userID, &row.title, &row.description, &row.status, &row.createdAt, &row.updatedAt)
+	row, err := r.queries.GetTaskByID(ctx, sqlc.GetTaskByIDParams{
+		ID:     taskID,
+		UserID: userID,
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.Task{}, domain.ErrTaskNotFound
 		}
 
-		return domain.Task{}, fmt.Errorf("TaskRepo - GetByID - r.Pool.QueryRow: %w", err)
+		return domain.Task{}, fmt.Errorf("TaskRepo - GetByID - GetTaskByID: %w", err)
 	}
 
-	return row.toDomain(), nil
+	return taskToDomain(&row), nil
 }
 
 // List -.
 func (r *TaskRepo) List(ctx context.Context, userID string, filter appports.TaskFilter) ([]domain.Task, int, error) {
-	countBuilder := r.builder.
-		Select("COUNT(*)").
-		From("tasks").
-		Where(sq.Eq{"user_id": userID})
-
-	if filter.Status != nil {
-		countBuilder = countBuilder.Where(sq.Eq{"status": *filter.Status})
-	}
-
-	if filter.Query != "" {
-		countBuilder = countBuilder.Where("title ILIKE ?", "%"+filter.Query+"%")
-	}
-
-	countSQL, countArgs, err := countBuilder.ToSql()
+	params, err := taskListParams(userID, filter)
 	if err != nil {
-		return nil, 0, fmt.Errorf("TaskRepo - List - countBuilder: %w", err)
+		return nil, 0, fmt.Errorf("TaskRepo - List - taskListParams: %w", err)
 	}
 
-	var total int
-
-	err = r.executor.QueryRow(ctx, countSQL, countArgs...).Scan(&total)
+	total, err := r.queries.CountTasks(ctx, sqlc.CountTasksParams{
+		UserID: params.UserID,
+		Status: params.Status,
+		Query:  params.Query,
+	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("TaskRepo - List - count query: %w", err)
+		return nil, 0, fmt.Errorf("TaskRepo - List - CountTasks: %w", err)
 	}
 
-	dataBuilder := r.builder.
-		Select("id, user_id, title, description, status, created_at, updated_at").
-		From("tasks").
-		Where(sq.Eq{"user_id": userID}).
-		OrderBy("created_at DESC").
-		Limit(filter.Limit).
-		Offset(filter.Offset)
-
-	if filter.Status != nil {
-		dataBuilder = dataBuilder.Where(sq.Eq{"status": *filter.Status})
-	}
-
-	if filter.Query != "" {
-		dataBuilder = dataBuilder.Where("title ILIKE ?", "%"+filter.Query+"%")
-	}
-
-	dataSQL, dataArgs, err := dataBuilder.ToSql()
+	rows, err := r.queries.ListTasks(ctx, params)
 	if err != nil {
-		return nil, 0, fmt.Errorf("TaskRepo - List - dataBuilder: %w", err)
+		return nil, 0, fmt.Errorf("TaskRepo - List - ListTasks: %w", err)
 	}
 
-	rows, err := r.executor.Query(ctx, dataSQL, dataArgs...)
-	if err != nil {
-		return nil, 0, fmt.Errorf("TaskRepo - List - r.Pool.Query: %w", err)
-	}
-	defer rows.Close()
-
-	tasks, err := collectTaskRows(rows, filter.Limit)
-	if err != nil {
-		return nil, 0, fmt.Errorf("TaskRepo - List - collectTaskRows: %w", err)
-	}
-
-	return tasks, total, nil
+	return tasksToDomain(rows), int(total), nil
 }
 
 // Update -.
 func (r *TaskRepo) Update(ctx context.Context, task *domain.Task) error {
-	row := newTaskRow(*task)
-
-	sql, args, err := r.builder.
-		Update("tasks").
-		Set("title", row.title).
-		Set("description", row.description).
-		Set("status", row.status).
-		Set("updated_at", row.updatedAt).
-		Where(sq.Eq{"id": row.id, "user_id": row.userID}).
-		ToSql()
+	rowsAffected, err := r.queries.UpdateTask(ctx, sqlc.UpdateTaskParams{
+		Title:       task.Title,
+		Description: textParam(task.Description),
+		Status:      string(task.Status),
+		UpdatedAt:   task.UpdatedAt,
+		ID:          task.ID,
+		UserID:      task.UserID,
+	})
 	if err != nil {
-		return fmt.Errorf("TaskRepo - Update - r.Builder: %w", err)
+		return fmt.Errorf("TaskRepo - Update - UpdateTask: %w", err)
 	}
 
-	result, err := r.executor.Exec(ctx, sql, args...)
-	if err != nil {
-		return fmt.Errorf("TaskRepo - Update - r.Pool.Exec: %w", err)
-	}
-
-	if result.RowsAffected() == 0 {
+	if rowsAffected == 0 {
 		return domain.ErrTaskNotFound
 	}
 
@@ -226,22 +111,58 @@ func (r *TaskRepo) Update(ctx context.Context, task *domain.Task) error {
 
 // Delete -.
 func (r *TaskRepo) Delete(ctx context.Context, userID, taskID string) error {
-	sql, args, err := r.builder.
-		Delete("tasks").
-		Where(sq.Eq{"id": taskID, "user_id": userID}).
-		ToSql()
+	rowsAffected, err := r.queries.DeleteTask(ctx, sqlc.DeleteTaskParams{
+		ID:     taskID,
+		UserID: userID,
+	})
 	if err != nil {
-		return fmt.Errorf("TaskRepo - Delete - r.Builder: %w", err)
+		return fmt.Errorf("TaskRepo - Delete - DeleteTask: %w", err)
 	}
 
-	result, err := r.executor.Exec(ctx, sql, args...)
-	if err != nil {
-		return fmt.Errorf("TaskRepo - Delete - r.Pool.Exec: %w", err)
-	}
-
-	if result.RowsAffected() == 0 {
+	if rowsAffected == 0 {
 		return domain.ErrTaskNotFound
 	}
 
 	return nil
+}
+
+func taskListParams(userID string, filter appports.TaskFilter) (sqlc.ListTasksParams, error) {
+	status := ""
+	if filter.Status != nil {
+		status = string(*filter.Status)
+	}
+
+	limitCount, offsetCount, err := paginationCounts(filter.Limit, filter.Offset)
+	if err != nil {
+		return sqlc.ListTasksParams{}, err
+	}
+
+	return sqlc.ListTasksParams{
+		UserID:      userID,
+		Status:      status,
+		Query:       filter.Query,
+		OffsetCount: offsetCount,
+		LimitCount:  limitCount,
+	}, nil
+}
+
+func taskToDomain(row *sqlc.Task) domain.Task {
+	return domain.Task{
+		ID:          row.ID,
+		UserID:      row.UserID,
+		Title:       row.Title,
+		Description: textValue(row.Description),
+		Status:      domain.TaskStatus(row.Status),
+		CreatedAt:   row.CreatedAt,
+		UpdatedAt:   row.UpdatedAt,
+	}
+}
+
+func tasksToDomain(rows []sqlc.Task) []domain.Task {
+	tasks := make([]domain.Task, 0, len(rows))
+	for i := range rows {
+		tasks = append(tasks, taskToDomain(&rows[i]))
+	}
+
+	return tasks
 }

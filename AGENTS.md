@@ -90,11 +90,14 @@ This file applies to the entire repository.
 
 ## Generated Files
 
+- Do not hand-edit generated sqlc outputs under `internal/infra/persistence/sqlc/*.go`.
 - Do not hand-edit generated protobuf outputs under `docs/proto/v1/*.pb.go` and `docs/proto/v1/*_grpc.pb.go`.
 - Do not hand-edit generated Swagger outputs unless the user explicitly asks:
   - `docs/docs.go`
   - `docs/swagger.json`
   - `docs/swagger.yaml`
+- If persistence SQL or schema changes, regenerate sqlc code with:
+  - `make sqlc`
 - If REST annotations change, regenerate Swagger with:
   - `go tool swag init --parseDependency -g internal/transport/restapi/router.go`
 - If proto definitions change, regenerate code with:

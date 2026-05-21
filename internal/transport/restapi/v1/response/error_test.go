@@ -6,20 +6,26 @@ import (
 )
 
 func TestNewError(t *testing.T) {
+	t.Parallel()
+
 	err := NewError("TASK_NOT_FOUND", "task not found", "req-123")
 
 	if err.Error.Code != "TASK_NOT_FOUND" {
 		t.Fatalf("unexpected code: %s", err.Error.Code)
 	}
+
 	if err.Error.Message != "task not found" {
 		t.Fatalf("unexpected message: %s", err.Error.Message)
 	}
+
 	if err.Error.RequestID != "req-123" {
 		t.Fatalf("unexpected request id: %s", err.Error.RequestID)
 	}
 }
 
 func TestNewErrorOmitsEmptyRequestID(t *testing.T) {
+	t.Parallel()
+
 	err := NewError("INTERNAL_SERVER_ERROR", "internal server error", "")
 
 	payload, marshalErr := json.Marshal(err)

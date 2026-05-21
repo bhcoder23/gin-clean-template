@@ -1,6 +1,6 @@
 module github.com/bhcoder23/gin-clean-template
 
-go 1.26
+go 1.25.5
 
 tool (
 	github.com/daixiang0/gci
@@ -15,7 +15,6 @@ tool (
 )
 
 require (
-	github.com/Masterminds/squirrel v1.5.4
 	github.com/caarlos0/env/v11 v11.4.0
 	github.com/gin-gonic/gin v1.12.0
 	github.com/go-playground/validator/v10 v10.30.2
@@ -264,8 +263,6 @@ require (
 	github.com/ktrysmt/go-bitbucket v0.6.4 // indirect
 	github.com/kulti/thelper v0.7.1 // indirect
 	github.com/kunwardeep/paralleltest v1.0.15 // indirect
-	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
-	github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0 // indirect
 	github.com/lasiar/canonicalheader v1.1.2 // indirect
 	github.com/ldez/exptostd v0.4.5 // indirect
 	github.com/ldez/gomoddirectives v0.8.0 // indirect
